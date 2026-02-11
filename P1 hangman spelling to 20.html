@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Number Spelling Hangman</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f7ff;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main {
+    flex: 3;
+    padding: 30px;
+}
+
+.scoreboard {
+    flex: 1;
+    background: #1e3a8a;
+    color: white;
+    padding: 20px;
+    font-size: 18px;
+}
+
+h1 {
+    color: #1e3a8a;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#gamePage {
+    display: none;
+}
+
+.number {
+    font-size: 48px;
+    margin: 20px 0;
+}
+
+.word {
+    font-size: 32px;
+    letter-spacing: 10px;
+}
+
+input {
+    font-size: 18px;
+    width: 50px;
+    text-align: center;
+}
+
+canvas {
+    border: 1px solid #333;
+    margin-top: 20px;
+    background: #fff;
+}
+
+#wrongLetters {
+    margin-top: 10px;
+    font-size: 20px;
+    color: red;
+    min-height: 24px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <div class="main">
+
+        <!-- INTRO PAGE -->
+        <div id="introPage">
+            <h1>Number Spelling Hangman</h1>
+            <p><strong>Instructions:</strong></p>
+            <ul>
+                <li>Spell the number shown.</li>
+                <li>Type <strong>one letter at a time</strong>.</li>
+                <li>Each correct spelling earns <strong>10 marks</strong>.</li>
+                <li>Be careful! Wrong letters build the stickman.</li>
+            </ul>
+            <button onclick="startGame()">Start Game</button>
+        </div>
+
+        <!-- GAME PAGE -->
+        <div id="gamePage">
+            <h2>Spell this number</h2>
+            <div class="number" id="numberDisplay"></div>
+            <div class="word" id="wordDisplay"></div>
+
+            <p>
+                Enter a letter:
+                <input type="text" id="letterInput" maxlength="1">
+                <button onclick="guessLetter()">Guess</button>
+            </p>
+
+            <canvas id="hangmanCanvas" width="200" height="250"></canvas>
+            <div id="wrongLetters"></div>
+        </div>
+
+    </div>
+
+    <!-- SCOREBOARD -->
+    <div class="scoreboard">
+        <h2>Scoreboard</h2>
+        <p>Score: <span id="score">0</span></p>
+        <p>Question: <span id="questionNumber">1</span> / 10</p>
+        <p>Wrong tries: <span id="wrongCount">0</span></p>
+    </div>
+</div>
+
+<script>
+const numbers = [
+    {num: 1, word: "one"},
+    {num: 2, word: "two"},
+    {num: 3, word: "three"},
+    {num: 4, word: "four"},
+    {num: 5, word: "five"},
+    {num: 6, word: "six"},
+    {num: 7, word: "seven"},
+    {num: 8, word: "eight"},
+    {num: 9, word: "nine"},
+    {num: 10, word: "ten"},
+    {num: 11, word: "eleven"},
+    {num: 12, word: "twelve"},
+    {num: 13, word: "thirteen"},
+    {num: 14, word: "fourteen"},
+    {num: 15, word: "fifteen"},
+    {num: 16, word: "sixteen"},
+    {num: 17, word: "seventeen"},
+    {num: 18, word: "eighteen"},
+    {num: 19, word: "nineteen"},
+    {num: 20, word: "twenty"}
+];
+
+let remainingNumbers = [];
+let currentWord = "";
+let displayWord = [];
+let wrongGuesses = 0;
+let score = 0;
+let question = 1;
+let wrongLettersArray = [];
+
+const canvas = document.getElementById("hangmanCanvas");
+const ctx = canvas.getContext("2d");
+
+function startGame() {
+    document.getElementById("introPage").style.display = "none";
+    document.getElementById("gamePage").style.display = "block";
+    remainingNumbers = [...numbers]; // copy array to avoid repeats
+    nextQuestion();
+}
+
+function nextQuestion() {
+    if (question > 10) {
+        alert("Game Over! Final Score: " + score);
+        location.reload();
+        return;
+    }
+
+    wrongGuesses = 0;
+    wrongLettersArray = [];
+    document.getElementById("wrongCount").textContent = wrongGuesses;
+    document.getElementById("wrongLetters").textContent = "";
+    document.getElementById("questionNumber").textContent = question;
+    clearCanvas();
+
+    const index = Math.floor(Math.random() * remainingNumbers.length);
+    const selected = remainingNumbers.splice(index, 1)[0]; // remove number to avoid repeat
+    currentWord = selected.word;
+    document.getElementById("numberDisplay").textContent = selected.num;
+
+    displayWord = Array(currentWord.length).fill("_");
+    updateWordDisplay();
+}
+
+function updateWordDisplay() {
+    document.getElementById("wordDisplay").textContent = displayWord.join(" ");
+}
+
+function guessLetter() {
+    const input = document.getElementById("letterInput");
+    const letter = input.value.toLowerCase();
+    input.value = "";
+
+    if (!letter || letter.length !== 1) return;
+
+    let correct = false;
+    for (let i = 0; i < currentWord.length; i++) {
+        if (currentWord[i] === letter && displayWord[i] === "_") {
+            displayWord[i] = letter;
+            correct = true;
+        }
+    }
+
+    if (!correct) {
+        if (!wrongLettersArray.includes(letter)) {
+            wrongLettersArray.push(letter);
+            wrongGuesses++;
+            document.getElementById("wrongCount").textContent = wrongGuesses;
+            drawHangman(wrongGuesses);
+            document.getElementById("wrongLetters").textContent = "Wrong Letters: " + wrongLettersArray.join(", ");
+        }
+    }
+
+    updateWordDisplay();
+
+    if (!displayWord.includes("_")) {
+        score += 10;
+        document.getElementById("score").textContent = score;
+        question++;
+        setTimeout(nextQuestion, 800);
+    }
+
+    if (wrongGuesses >= 7) {
+        alert("The man is hanged! The word was: " + currentWord);
+        question++;
+        setTimeout(nextQuestion, 800);
+    }
+}
+
+// Stickman drawing
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw gallows
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(20, 230);
+    ctx.lineTo(180, 230);
+    ctx.moveTo(50, 230);
+    ctx.lineTo(50, 20);
+    ctx.lineTo(130, 20);
+    ctx.lineTo(130, 40);
+    ctx.stroke();
+}
+
+function drawHangman(step) {
+    ctx.lineWidth = 2;
+    switch(step) {
+        case 1: // head
+            ctx.beginPath();
+            ctx.arc(130, 60, 20, 0, Math.PI * 2);
+            ctx.stroke();
+            break;
+        case 2: // body
+            ctx.beginPath();
+            ctx.moveTo(130, 80);
+            ctx.lineTo(130, 140);
+            ctx.stroke();
+            break;
+        case 3: // left hand
+            ctx.beginPath();
+            ctx.moveTo(130, 100);
+            ctx.lineTo(100, 120);
+            ctx.stroke();
+            break;
+        case 4: // right hand
+            ctx.beginPath();
+            ctx.moveTo(130, 100);
+            ctx.lineTo(160, 120);
+            ctx.stroke();
+            break;
+        case 5: // left leg
+            ctx.beginPath();
+            ctx.moveTo(130, 140);
+            ctx.lineTo(100, 180);
+            ctx.stroke();
+            break;
+        case 6: // right leg
+            ctx.beginPath();
+            ctx.moveTo(130, 140);
+            ctx.lineTo(160, 180);
+            ctx.stroke();
+            break;
+        case 7: // hanged (eyes)
+            ctx.beginPath();
+            ctx.moveTo(123, 55);
+            ctx.lineTo(127, 59);
+            ctx.moveTo(127, 55);
+            ctx.lineTo(123, 59);
+            ctx.moveTo(133, 55);
+            ctx.lineTo(137, 59);
+            ctx.moveTo(137, 55);
+            ctx.lineTo(133, 59);
+            ctx.stroke();
+            break;
+    }
+}
+</script>
+
+</body>
+</html>
