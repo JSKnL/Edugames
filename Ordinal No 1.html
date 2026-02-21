@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ordinal Numbers Game</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: white;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+
+  #gameContainer {
+    display: none;
+    margin-top: 30px;
+  }
+
+  h1 {
+    color: #333;
+  }
+
+  .btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 12px 24px;
+    margin-top: 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 18px;
+  }
+
+  .btn:hover {
+    background-color: #45a049;
+  }
+
+  #boxes {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 30px;
+    flex-wrap: wrap;
+  }
+
+  .box {
+    width: 70px;
+    height: 70px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .box:hover {
+    transform: scale(1.1);
+  }
+
+  #question {
+    font-size: 24px;
+    margin-bottom: 20px;
+    color: #222;
+  }
+
+  #feedback {
+    font-size: 22px;
+    margin-top: 10px;
+    color: red;
+    font-weight: bold;
+  }
+
+  .stars {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+  }
+
+  .star {
+    color: gold;
+    font-size: 40px;
+    margin: 0 3px;
+    animation: pop 0.5s ease;
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1.2); opacity: 1; }
+  }
+
+  #result {
+    font-size: 22px;
+    margin-top: 20px;
+    color: blue;
+  }
+</style>
+</head>
+<body>
+
+<div id="instructions">
+  <h1>Ordinal Numbers Game</h1>
+  <p>Welcome! Test your understanding of ordinal numbers.</p>
+  <p>👉 Click the box according to the instruction given for each question.</p>
+  <p>🌟 If you click the correct box, stars will appear and you’ll see “You did it!”</p>
+  <p>❌ If you click the wrong one, you'll hear a buzz and see “Try again!”</p>
+  <button class="btn" onclick="startGame()">Start Game</button>
+</div>
+
+<div id="gameContainer">
+  <h2 id="question"></h2>
+  <div id="boxes"></div>
+  <div id="feedback"></div>
+  <div class="stars" id="stars"></div>
+  <div id="result"></div>
+</div>
+
+<!-- Sound Effects -->
+<audio id="dingSound">
+  <source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" type="audio/ogg">
+</audio>
+<audio id="buzzSound">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+</audio>
+
+<script>
+const questions = [
+  { text: "Click the second box from the left.", answer: 2 },
+  { text: "Click the third box from the right.", answer: 8 },
+  { text: "Click the first box from the left.", answer: 1 },
+  { text: "Click the fourth box from the right.", answer: 7 },
+  { text: "Click the eighth box from the right.", answer: 3 },
+  { text: "Click the ninth box from the left.", answer: 9 },
+  { text: "Click the sixth box from the right.", answer: 5 },
+  { text: "Click the fourth box from the left.", answer: 4 }, <!-- updated question -->
+  { text: "Click the tenth box from the right.", answer: 1 },
+  { text: "Click the seventh box from the left.", answer: 7 }
+];
+
+const colors = ["#FF6F61","#6B5B95","#88B04B","#F7CAC9","#92A8D1","#955251","#B565A7","#009B77","#DD4124","#45B8AC"];
+
+let currentQuestion = 0;
+let score = 0;
+
+function startGame() {
+  document.getElementById("instructions").style.display = "none";
+  document.getElementById("gameContainer").style.display = "block";
+  loadQuestion();
+}
+
+function shuffleArray(array) {
+  let arr = array.slice();
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function loadQuestion() {
+  const q = questions[currentQuestion];
+  document.getElementById("question").textContent = `Question ${currentQuestion + 1}: ${q.text}`;
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("stars").innerHTML = "";
+  
+  const boxesContainer = document.getElementById("boxes");
+  boxesContainer.innerHTML = "";
+
+  // Shuffle colors each time
+  const shuffledColors = shuffleArray(colors);
+
+  for (let i = 0; i < 10; i++) {
+    const box = document.createElement("div");
+    box.classList.add("box");
+    box.style.backgroundColor = shuffledColors[i];
+    box.addEventListener("click", () => checkAnswer(i + 1));
+    boxesContainer.appendChild(box);
+  }
+}
+
+function checkAnswer(selected) {
+  const q = questions[currentQuestion];
+  const ding = document.getElementById("dingSound");
+  const buzz = document.getElementById("buzzSound");
+  
+  if (selected === q.answer) {
+    showStars();
+    document.getElementById("feedback").style.color = "green";
+    document.getElementById("feedback").textContent = "✅ You did it!";
+    ding.play();
+    score++;
+    setTimeout(nextQuestion, 1500);
+  } else {
+    document.getElementById("feedback").style.color = "red";
+    document.getElementById("feedback").textContent = "❌ Try again!";
+    buzz.play();
+  }
+}
+
+function showStars() {
+  const stars = document.getElementById("stars");
+  stars.innerHTML = "⭐️⭐️⭐️";
+}
+
+function nextQuestion() {
+  currentQuestion++;
+  if (currentQuestion < questions.length) {
+    loadQuestion();
+  } else {
+    endGame();
+  }
+}
+
+function endGame() {
+  document.getElementById("gameContainer").innerHTML = `
+    <h2>🎉 Great job!</h2>
+    <p>You completed all ${questions.length} questions.</p>
+    <p>Your score: ${score} / ${questions.length}</p>
+    <button class="btn" onclick="location.reload()">Play Again</button>
+  `;
+}
+</script>
+
+</body>
+</html>
