@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Number Spelling Hangman</title>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f7ff;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main {
+    flex: 3;
+    padding: 30px;
+}
+
+.scoreboard {
+    flex: 1;
+    background: #1e3a8a;
+    color: white;
+    padding: 20px;
+    font-size: 18px;
+}
+
+h1 { color: #1e3a8a; }
+
+button {
+    padding: 8px 18px;
+    font-size: 16px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+#gamePage { display: none; }
+#endScreen { display: none; }
+
+.number {
+    font-size: 48px;
+    margin: 20px 0;
+}
+
+.word {
+    font-size: 30px;
+    letter-spacing: 3px;
+    white-space: pre; /* important for spacing */
+}
+
+input {
+    font-size: 18px;
+    width: 50px;
+    text-align: center;
+}
+
+canvas {
+    border: 1px solid #333;
+    margin-top: 20px;
+    background: #fff;
+}
+
+#wrongLetters {
+    margin-top: 10px;
+    font-size: 20px;
+    color: red;
+    min-height: 24px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<div class="main">
+
+<!-- INTRO PAGE -->
+<div id="introPage">
+    <h1>Number Spelling Hangman</h1>
+    <p><strong>Select Difficulty:</strong></p>
+    <button onclick="startGame(1)">Level 1: 1–10</button>
+    <button onclick="startGame(2)">Level 2: 11–20</button>
+    <button onclick="startGame(3)">Level 3: 21–100</button>
+</div>
+
+<!-- GAME PAGE -->
+<div id="gamePage">
+    <h2>Spell this number</h2>
+    <div class="number" id="numberDisplay"></div>
+    <div class="word" id="wordDisplay"></div>
+
+    <p>
+        Enter a letter:
+        <input type="text" id="letterInput" maxlength="1">
+        <button onclick="guessLetter()">Guess</button>
+    </p>
+
+    <canvas id="hangmanCanvas" width="200" height="250"></canvas>
+    <div id="wrongLetters"></div>
+</div>
+
+<!-- END SCREEN -->
+<div id="endScreen">
+    <h2>Game Over!</h2>
+    <p>Your Final Score: <span id="finalScore"></span></p>
+    <button onclick="playAgain()">Play Again</button>
+</div>
+
+</div>
+
+<!-- SCOREBOARD -->
+<div class="scoreboard">
+    <h2>Scoreboard</h2>
+    <p>Score: <span id="score">0</span></p>
+    <p>Question: <span id="questionNumber">1</span> / 10</p>
+    <p>Wrong tries: <span id="wrongCount">0</span></p>
+</div>
+</div>
+
+<script>
+
+// Convert number to words (with hyphen and space)
+function numberToWords(num) {
+    const ones = ["","one","two","three","four","five","six","seven","eight","nine"];
+    const teens = ["ten","eleven","twelve","thirteen","fourteen","fifteen",
+                   "sixteen","seventeen","eighteen","nineteen"];
+    const tens = ["","","twenty","thirty","forty","fifty","sixty","seventy","eighty","ninety"];
+
+    if (num < 10) return ones[num];
+    if (num < 20) return teens[num - 10];
+    if (num < 100) {
+        if (num % 10 === 0) return tens[Math.floor(num/10)];
+        return tens[Math.floor(num/10)] + "-" + ones[num%10];
+    }
+    if (num === 100) return "one hundred";
+}
+
+let remainingNumbers = [];
+let currentWord = "";
+let displayWord = [];
+let wrongGuesses = 0;
+let wrongLettersArray = [];
+let score = 0;
+let question = 1;
+let minRange = 1;
+let maxRange = 10;
+
+const canvas = document.getElementById("hangmanCanvas");
+const ctx = canvas.getContext("2d");
+
+function startGame(level) {
+
+    if (level === 1) { minRange = 1; maxRange = 10; }
+    if (level === 2) { minRange = 11; maxRange = 20; }
+    if (level === 3) { minRange = 21; maxRange = 100; }
+
+    score = 0;
+    question = 1;
+    document.getElementById("score").textContent = 0;
+
+    remainingNumbers = [];
+    for (let i = minRange; i <= maxRange; i++) {
+        remainingNumbers.push(i);
+    }
+
+    document.getElementById("introPage").style.display = "none";
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("gamePage").style.display = "block";
+
+    nextQuestion();
+}
+
+function nextQuestion() {
+
+    if (question > 10) {
+        endGame();
+        return;
+    }
+
+    wrongGuesses = 0;
+    wrongLettersArray = [];
+
+    document.getElementById("wrongCount").textContent = 0;
+    document.getElementById("wrongLetters").textContent = "";
+    document.getElementById("questionNumber").textContent = question;
+
+    clearCanvas();
+
+    const index = Math.floor(Math.random() * remainingNumbers.length);
+    const selectedNumber = remainingNumbers.splice(index,1)[0];
+
+    document.getElementById("numberDisplay").textContent = selectedNumber;
+    currentWord = numberToWords(selectedNumber).toLowerCase();
+
+    displayWord = [];
+    for (let i = 0; i < currentWord.length; i++) {
+        if (currentWord[i] === "-" || currentWord[i] === " ") {
+            displayWord.push(currentWord[i]); // show hyphen & space automatically
+        } else {
+            displayWord.push("_");
+        }
+    }
+
+    updateWordDisplay();
+}
+
+function updateWordDisplay() {
+
+    let output = "";
+
+    for (let i = 0; i < displayWord.length; i++) {
+
+        if (displayWord[i] === " ") {
+            output += "    ";  // wider visible space
+        } else {
+            output += displayWord[i] + " ";
+        }
+    }
+
+    document.getElementById("wordDisplay").textContent = output.trim();
+}
+
+function guessLetter() {
+
+    const input = document.getElementById("letterInput");
+    const letter = input.value.toLowerCase();
+    input.value = "";
+
+    if (!letter || letter.length !== 1 || !letter.match(/[a-z]/)) return;
+
+    let correct = false;
+
+    for (let i = 0; i < currentWord.length; i++) {
+        if (currentWord[i] === letter) {
+            displayWord[i] = letter;
+            correct = true;
+        }
+    }
+
+    if (!correct && !wrongLettersArray.includes(letter)) {
+        wrongLettersArray.push(letter);
+        wrongGuesses++;
+        document.getElementById("wrongCount").textContent = wrongGuesses;
+        drawHangman(wrongGuesses);
+        document.getElementById("wrongLetters").textContent =
+            "Wrong Letters: " + wrongLettersArray.join(", ");
+    }
+
+    updateWordDisplay();
+
+    if (!displayWord.includes("_")) {
+        score += 10;
+        document.getElementById("score").textContent = score;
+        question++;
+        setTimeout(nextQuestion, 800);
+    }
+
+    if (wrongGuesses >= 7) {
+        question++;
+        setTimeout(nextQuestion, 800);
+    }
+}
+
+function endGame() {
+    document.getElementById("gamePage").style.display = "none";
+    document.getElementById("endScreen").style.display = "block";
+    document.getElementById("finalScore").textContent = score;
+}
+
+function playAgain() {
+    document.getElementById("endScreen").style.display = "none";
+    document.getElementById("introPage").style.display = "block";
+}
+
+// Stickman Drawing
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(20, 230);
+    ctx.lineTo(180, 230);
+    ctx.moveTo(50, 230);
+    ctx.lineTo(50, 20);
+    ctx.lineTo(130, 20);
+    ctx.lineTo(130, 40);
+    ctx.stroke();
+}
+
+function drawHangman(step) {
+    ctx.lineWidth = 2;
+    switch(step) {
+        case 1: ctx.beginPath(); ctx.arc(130,60,20,0,Math.PI*2); ctx.stroke(); break;
+        case 2: ctx.beginPath(); ctx.moveTo(130,80); ctx.lineTo(130,140); ctx.stroke(); break;
+        case 3: ctx.beginPath(); ctx.moveTo(130,100); ctx.lineTo(100,120); ctx.stroke(); break;
+        case 4: ctx.beginPath(); ctx.moveTo(130,100); ctx.lineTo(160,120); ctx.stroke(); break;
+        case 5: ctx.beginPath(); ctx.moveTo(130,140); ctx.lineTo(100,180); ctx.stroke(); break;
+        case 6: ctx.beginPath(); ctx.moveTo(130,140); ctx.lineTo(160,180); ctx.stroke(); break;
+        case 7:
+            ctx.beginPath();
+            ctx.moveTo(123,55); ctx.lineTo(127,59);
+            ctx.moveTo(133,55); ctx.lineTo(137,59);
+            ctx.stroke();
+            break;
+    }
+}
+</script>
+
+</body>
+</html>
