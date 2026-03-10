@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Find Vertical & Horizontal Lines</title>
+
+<style>
+:root{
+--accent:#004d61;
+--btn:#0ed2f7;
+--btnHover:#00a2c6;
+--bg:#ffffff;
+}
+
+html,body{
+height:100%;
+margin:0;
+background:var(--bg);
+font-family:Poppins,sans-serif;
+display:flex;
+flex-direction:column;
+align-items:center;
+padding:18px;
+}
+
+h1{
+color:var(--accent);
+margin:6px 0 0;
+font-size:1.5rem;
+}
+
+.card{
+width:100%;
+max-width:720px;
+background:#fff;
+border-radius:12px;
+padding:16px;
+box-shadow:0 6px 20px rgba(0,0,0,0.12);
+text-align:center;
+margin-top:14px;
+}
+
+#canvasWrap{
+width:420px;
+height:420px;
+margin:14px auto;
+border-radius:12px;
+border:2px solid var(--accent);
+background:#ffffff;
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+canvas{
+border-radius:10px;
+cursor:pointer;
+background:#ffffff;
+}
+
+.controls{
+display:flex;
+gap:12px;
+align-items:center;
+justify-content:center;
+flex-wrap:wrap;
+margin-top:6px;
+}
+
+.btn{
+background:var(--btn);
+color:#fff;
+border:none;
+padding:10px 16px;
+border-radius:8px;
+font-weight:600;
+cursor:pointer;
+}
+
+.btn:hover{
+background:var(--btnHover);
+}
+
+#timer{
+font-weight:700;
+color:var(--accent);
+}
+
+#score{
+color:var(--accent);
+font-weight:600;
+}
+
+#questionText{
+font-weight:700;
+color:var(--accent);
+margin-top:8px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Find Vertical & Horizontal Lines</h1>
+
+<div id="instructionPage" class="card">
+
+<h2>How to Play</h2>
+
+<p>Each question shows <strong>10 lines</strong>.</p>
+
+<p>
+There are <strong>4 correct lines</strong>.
+</p>
+
+<p>
+When asked to click horizontal lines, there will also be some vertical lines.
+When asked to click vertical lines, there will also be some horizontal lines.
+</p>
+
+<ul style="text-align:left;display:inline-block;">
+<li>20 questions</li>
+<li>30 seconds per question</li>
+<li>+5 for correct click</li>
+<li>-2 for wrong click</li>
+</ul>
+
+<button id="startBtn" class="btn">Start Game</button>
+
+</div>
+
+<div id="gameContainer" class="card" style="display:none">
+
+<div style="display:flex;justify-content:space-between">
+<div id="timer">Time Left: 30s</div>
+<div id="score">Score: 0</div>
+</div>
+
+<div id="questionText"></div>
+
+<div id="canvasWrap">
+<canvas id="lineCanvas"></canvas>
+</div>
+
+<div class="controls">
+<div style="color:var(--accent)">Click the correct lines</div>
+<button id="restartBtn" class="btn" style="background:#f3a683">Restart</button>
+</div>
+
+</div>
+
+<div id="resultPage" class="card" style="display:none">
+<h2>Game Over!</h2>
+<p id="finalScore" style="font-weight:700;color:var(--accent)"></p>
+<button id="playAgain" class="btn">Play Again</button>
+</div>
+
+<audio id="clapSound">
+<source src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_dca5f9d6b7.mp3?filename=clapping-1-14288.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+
+const TOTAL_QUESTIONS=20
+const TIME_PER_QUESTION=30
+
+const POINT_CORRECT=5
+const POINT_WRONG=-2
+
+const TOTAL_LINES=10
+const TOTAL_CORRECT=4
+
+const startBtn=document.getElementById("startBtn")
+const gameContainer=document.getElementById("gameContainer")
+const instructionPage=document.getElementById("instructionPage")
+const resultPage=document.getElementById("resultPage")
+
+const lineCanvas=document.getElementById("lineCanvas")
+
+const timerDisplay=document.getElementById("timer")
+const scoreDisplay=document.getElementById("score")
+const questionText=document.getElementById("questionText")
+
+const restartBtn=document.getElementById("restartBtn")
+const finalScore=document.getElementById("finalScore")
+const playAgain=document.getElementById("playAgain")
+
+const clapSound=document.getElementById("clapSound")
+
+let ctx
+let DPR=window.devicePixelRatio||1
+let CSS_CANVAS_SIZE=400
+
+let score=0
+let questionIndex=0
+
+let timer
+let timeLeft=TIME_PER_QUESTION
+
+let lines=[]
+let targetType=""
+
+let correctClicks=0
+let gameActive=false
+
+const gridPositionsCSS=[
+[75,75],[200,75],[325,75],
+[75,200],[200,200],[325,200],
+[75,325],[200,325],[325,325],
+[150,125],[250,275],[350,150]
+]
+
+function setupCanvas(){
+lineCanvas.style.width=CSS_CANVAS_SIZE+"px"
+lineCanvas.style.height=CSS_CANVAS_SIZE+"px"
+lineCanvas.width=CSS_CANVAS_SIZE*DPR
+lineCanvas.height=CSS_CANVAS_SIZE*DPR
+ctx=lineCanvas.getContext("2d")
+ctx.fillStyle="#ffffff"
+ctx.fillRect(0,0,lineCanvas.width,lineCanvas.height)
+}
+
+setupCanvas()
+
+function cssToDevice(v){return v*DPR}
+
+function drawLine(line){
+ctx.beginPath()
+ctx.lineWidth=6*DPR
+ctx.lineCap="round"
+ctx.strokeStyle=line.color
+ctx.moveTo(line.x1,line.y1)
+ctx.lineTo(line.x2,line.y2)
+ctx.stroke()
+}
+
+function renderLines(){
+ctx.fillStyle="#ffffff"
+ctx.fillRect(0,0,lineCanvas.width,lineCanvas.height)
+lines.forEach(drawLine)
+}
+
+function distance(px,py,ax,ay,bx,by){
+const vx=bx-ax
+const vy=by-ay
+const wx=px-ax
+const wy=py-ay
+const c1=vx*wx+vy*wy
+if(c1<=0)return Math.hypot(px-ax,py-ay)
+const c2=vx*vx+vy*vy
+if(c2<=c1)return Math.hypot(px-bx,py-by)
+const b=c1/c2
+const projx=ax+b*vx
+const projy=ay+b*vy
+return Math.hypot(px-projx,py-projy)
+}
+
+function findNearestLine(mx,my){
+
+let best=null
+let bestDist=Infinity
+
+for(const ln of lines){
+
+if(ln.clicked)continue
+
+const dist=distance(mx,my,ln.x1,ln.y1,ln.x2,ln.y2)
+
+if(dist<bestDist){
+bestDist=dist
+best=ln
+}
+
+}
+
+const TOL=12*DPR
+return best && bestDist<=TOL ? best:null
+}
+
+function buildQuestion(){
+
+lines=[]
+correctClicks=0
+
+targetType=Math.random()>0.5?"vertical":"horizontal"
+
+questionText.textContent=`Question ${questionIndex}: Click all the ${targetType} lines`
+
+const pos=gridPositionsCSS.slice().sort(()=>Math.random()-0.5)
+
+let types=[]
+
+if(targetType==="horizontal"){
+types=[...Array(4).fill("horizontal"),...Array(2).fill("vertical"),...Array(4).fill("slanted")]
+}else{
+types=[...Array(4).fill("vertical"),...Array(2).fill("horizontal"),...Array(4).fill("slanted")]
+}
+
+types.sort(()=>Math.random()-0.5)
+
+for(let i=0;i<TOTAL_LINES;i++){
+
+const [cx,cy]=pos[i]
+const x=cssToDevice(cx)
+const y=cssToDevice(cy)
+
+let type=types[i]
+let x1,y1,x2,y2
+
+if(type==="vertical"){
+
+const len=cssToDevice(110)
+
+x1=x
+y1=y-len/2
+x2=x
+y2=y+len/2
+
+}
+else if(type==="horizontal"){
+
+const len=cssToDevice(110)
+
+x1=x-len/2
+y1=y
+x2=x+len/2
+y2=y
+
+}
+else{
+
+const len=cssToDevice(130)
+
+let angle
+
+do{
+angle=Math.random()*Math.PI
+}
+while(
+Math.abs(angle)<Math.PI/18 ||
+Math.abs(angle-Math.PI/2)<Math.PI/18
+)
+
+const dx=(len/2)*Math.cos(angle)
+const dy=(len/2)*Math.sin(angle)
+
+x1=x-dx
+y1=y-dy
+x2=x+dx
+y2=y+dy
+
+}
+
+lines.push({
+id:i,
+type,
+x1,
+y1,
+x2,
+y2,
+clicked:false,
+color:"#004d61"
+})
+
+}
+
+renderLines()
+
+}
+
+lineCanvas.addEventListener("click",(e)=>{
+
+if(!gameActive)return
+
+const rect=lineCanvas.getBoundingClientRect()
+
+const mx=(e.clientX-rect.left)*(lineCanvas.width/rect.width)
+const my=(e.clientY-rect.top)*(lineCanvas.height/rect.height)
+
+const line=findNearestLine(mx,my)
+
+if(!line)return
+
+line.clicked=true
+
+if(line.type===targetType){
+score+=POINT_CORRECT
+correctClicks++
+line.color="green"
+}else{
+score+=POINT_WRONG
+line.color="red"
+}
+
+scoreDisplay.textContent=`Score: ${score}`
+
+renderLines()
+
+if(correctClicks>=TOTAL_CORRECT){
+
+gameActive=false
+clapSound.currentTime=0
+clapSound.play()
+
+clearInterval(timer)
+
+setTimeout(nextQuestion,800)
+
+}
+
+})
+
+function startTimer(){
+
+clearInterval(timer)
+
+timeLeft=TIME_PER_QUESTION
+
+timerDisplay.textContent=`Time Left: ${timeLeft}s`
+
+timer=setInterval(()=>{
+
+timeLeft--
+
+timerDisplay.textContent=`Time Left: ${timeLeft}s`
+
+if(timeLeft<=0){
+
+clearInterval(timer)
+gameActive=false
+setTimeout(nextQuestion,350)
+
+}
+
+},1000)
+
+}
+
+function startGame(){
+
+score=0
+questionIndex=0
+
+instructionPage.style.display="none"
+gameContainer.style.display="block"
+
+nextQuestion()
+
+}
+
+function nextQuestion(){
+
+if(questionIndex>=TOTAL_QUESTIONS){
+endGame()
+return
+}
+
+questionIndex++
+
+buildQuestion()
+
+startTimer()
+
+gameActive=true
+
+}
+
+function endGame(){
+
+clearInterval(timer)
+
+gameContainer.style.display="none"
+resultPage.style.display="block"
+
+finalScore.textContent=`Your Final Score: ${score} points!`
+
+}
+
+function restartGame(){
+
+clearInterval(timer)
+
+score=0
+questionIndex=0
+
+scoreDisplay.textContent="Score: 0"
+timerDisplay.textContent="Time Left: 30s"
+
+gameContainer.style.display="none"
+resultPage.style.display="none"
+
+instructionPage.style.display="block"
+
+}
+
+startBtn.addEventListener("click",startGame)
+restartBtn.addEventListener("click",restartGame)
+playAgain.addEventListener("click",restartGame)
+
+</script>
+
+</body>
+</html>
