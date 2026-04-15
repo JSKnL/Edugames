@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Math Strategies Within 20</title>
+    <style>
+        :root {
+            --primary: #4A90E2; 
+            --secondary: #F39C12; 
+            --success: #2ECC71; 
+            --highlight: #F1C40F;
+            --bg-color: #F9F9F9;
+            --text-dark: #333;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* FIXED IPAD LAYOUT: Using 100% instead of vh prevents Safari bottom-bar clipping */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%; 
+            position: absolute; 
+            top: 0; left: 0; bottom: 0; right: 0;
+            background-color: var(--bg-color);
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Lock the body to prevent bouncy overscroll */
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {-webkit-appearance: none; margin: 0;}
+        input[type=number] {-moz-appearance: textfield; padding: 0 !important; margin: 0 !important;}
+        header {background-color: var(--primary);color: white; width: 100%; height: 8vh;
+            min-height: 50px; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; /* Prevents header from squishing */ position: relative; z-index: 10;}
+        h1 { margin: 0; font-size: min(4vw, 3vh); }
+        #progress-bar { position: absolute; bottom: 0; left: 0; background-color: #ddd; width: 100%; height: 1vh; display: none; }
+        #progress-fill { background-color: var(--success); width: 0%; height: 100%; transition: width 0.3s ease; }
+        .correct-input { border-color: var(--success) !important; background-color: #E8F8F5 !important; color: var(--success) !important; }
+        .wrong-input { border-color: #E74C3C !important; background-color: #FDEDEC !important; color: #E74C3C !important; }
+        .link-c1 { border-color: #E67E22 !important; background-color: #FDF2E9 !important; color: #D35400 !important; }
+        .link-c1-glow { box-shadow: 0 0 1vh #E67E22 !important; transform: scale(1.1); z-index: 10; }
+        .link-c2 { border-color: #9B59B6 !important; background-color: #F4ECF7 !important; color: #8E44AD !important; }
+        .link-c2-glow { box-shadow: 0 0 1vh #9B59B6 !important; transform: scale(1.1); z-index: 10; }
+        /* Flexible Cover Screen */
+        #cover {display: flex; flex-direction: column; justify-content: center; align-items: center; flex: 1; /* Automatically takes remaining screen space */
+            width: 100%; padding: 2vh 2vw; background-color: #fff; z-index: 50;}
+        #cover-title {font-size: min(15vw, 10vh); color: var(--primary); text-align: center;
+            margin: 0 0 2vh 0; cursor: pointer; transition: transform 0.2s ease-in-out;}
+        #cover-title:hover { transform: scale(1.05); }
+        #cover-instruction {font-size: min(6vw, 4vh); color: var(--text-dark); text-align: center;
+            opacity: 0.8;}
+        .hidden-screen { display: none !important; }
+        /* Flexible Workspace */
+        #workspace {display: none; width: 100%; flex: 1; /* Takes up exact space below header */ 
+            padding: 2vh 2vw 4vh 2vw; /* Added extra bottom padding for iPad */
+            flex-direction: column;
+            justify-content: space-evenly; /* Evenly spaces items instead of pushing to edges */
+            align-items: center; overflow-y: auto; /* Allows scrolling inside if screen is too short horizontally */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */}
+        
+        #workspace:not(.hidden-workspace) { display: flex; }
+        #instruction {font-size: min(4.5vw, 3vh); font-weight: bold; color: #8E44AD; 
+            text-align: center; display: flex; align-items: center; flex-shrink: 0;}
+        .flex-container {display: flex; flex-direction: row; justify-content: center; align-items: center; gap: 3vw; width: 100%; flex-shrink: 0;}
+        .manipulatives-zone { display: flex; flex-direction: column; gap: 1.5vh; align-items: center; }
+        .ten-frame {display: grid; grid-template-columns: repeat(5, min(10vw, 6vh)); 
+            grid-template-rows: repeat(2, min(10vw, 6vh)); gap: 0.3vh; background-color: #fff; border: 0.3vh solid #34495E; padding: 0.5vh; border-radius: 1vh; transition: all 0.3s ease;}
+        .frame-glow {border-color: var(--highlight) !important; box-shadow: 0 0 1vh var(--highlight), 0 0 2vh var(--secondary); animation: pulseGlow 1.5s infinite alternate;}
+        @keyframes pulseGlow {from { box-shadow: 0 0 1vh var(--highlight), 0 0 1.5vh var(--secondary); }
+            to { box-shadow: 0 0 2vh var(--highlight), 0 0 3.5vh var(--secondary); }
+        }
+        .cell { border: 0.2vh solid #BDC3C7; border-radius: 0.5vh; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; }
+        .cube { width: 80%; height: 80%; border-radius: 0.5vh; box-shadow: inset -0.2vh -0.2vh 0 rgba(0,0,0,0.2); }
+        .cube.blue { background-color: var(--primary); }
+        .cube.orange { background-color: var(--secondary); }
+        .cube.crossed { opacity: 0.6; position: relative; }
+        .cube.crossed::after { content: 'X'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: red; font-size: min(5vw, 3vh); font-weight: bold; }
+        .make10-bond-zone {position: relative; height: 25vh; min-height: 150px;
+            aspect-ratio: 22 / 18; background: #E8F5E9; border-radius: 2vh; 
+            border: 0.3vh solid #C8E6C9;}
+        .make10-text {position: absolute; font-size: min(5vw, 4vh); font-weight: bold; color: #004D40; z-index: 3;}
+        .make10-input {position: absolute; width: 25%; height: 30%; font-size: min(5vw, 4vh); 
+            font-weight: bold; text-align: center; border: 0.3vh solid #004D40; border-radius: 1vh; font-family: inherit; z-index: 3; background: white; transition: all 0.2s;}
+        #equation-zone {font-size: min(5vw, 4vh); font-weight: bold; display: flex; 
+            flex-direction: column; justify-content: center; gap: 2vh; align-items: center; 
+            flex-shrink: 0; margin: 2vh 0;}
+        .equation-row { display: flex; align-items: center; gap: 2vw; }
+        input.eq-input {width: min(14vw, 8vh); height: min(11vw, 7vh); font-size: min(4.5vw, 3.5vh); font-weight: bold; text-align: center; border: 0.3vh solid #ccc;
+            border-radius: 1vh; font-family: inherit; transition: all 0.2s; outline: none;}
+        /* Fixed Controls to never shrink out of view */
+   .controls {display: flex; gap: 4vw; justify-content: center; align-items: center;
+            flex-shrink: 0; /* Prevents iPad from crushing buttons */ padding-bottom: 2vh; 
+            width: 100%;}
+        .action-btn {background-color: var(--primary); color: white; border: none; 
+            height: min(12vw, 7vh); min-height: 45px; padding: 0 5vw; font-size: min(4vw, 3vh); 
+            border-radius: 1vh; font-weight: bold; box-shadow: 0 0.5vh 0 #2980B9; cursor: pointer; transition: 0.2s; font-family: inherit; }
+        .action-btn.green { background-color: var(--success); box-shadow: 0 0.5vh 0 #27AE60; }
+        .hidden { display: none !important; }
+        #success-overlay {display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; justify-content: center; 
+            align-items: center; flex-direction: column; font-size: min(8vw, 5vh); 
+            color: var(--success); font-weight: bold; text-align: center; padding: 20px; box-sizing: border-box;}
+        .sticker-display {font-size: 10vh; margin-top: 20px; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);}
+        .sticker-collection {display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; font-size: 6vh;}
+        @keyframes popIn {0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Math Strategies Within 20</h1>
+        <div id="progress-bar"><div id="progress-fill"></div></div>
+    </header>
+    <div id="cover">
+        <h1 id="cover-title">Make 10</h1>
+        <div id="cover-instruction">Click the title to begin!</div>
+    </div>
+    <div id="workspace" class="hidden-workspace">
+        <div id="instruction">Instruction</div>
+         <div class="flex-container">
+            <div class="manipulatives-zone" id="frames-container"></div>
+            <div id="make10-bond-container" class="hidden"></div>
+        </div>
+        <div id="equation-zone"></div>
+        <div class="controls">
+            <button class="action-btn" style="background-color: #95A5A6; box-shadow: 0 0.5vh 0 #7F8C8D;" onclick="showCover()">Back to Cover</button>
+            <button class="action-btn hidden" id="move-cubes-btn" onclick="executeMoveCubes()">Move Cubes</button>
+            <button class="action-btn green" id="check-btn" onclick="checkAnswer()">Check Answer</button>
+        </div>
+    </div>
+    <div id="success-overlay">
+        <div id="overlay-msg"></div>
+        <button id="play-again-btn" class="action-btn green hidden" style="margin-top:4vh;" onclick="startGame()">Play Again</button>
+    </div>
+    <script>
+        const stickerBank = ['🐶', '🐱', '🦊', '🐻', '🐼', '🐨', '🐯', '', '🐰', '🐹', '🦄', '🐝', '🦋', '', '🦕', '🧸', '🎈', '🍭', '🍓', '🍎'];
+                let state = {num1: 0, num2: 0, step: 0, questionCount: 0, maxQuestions: 5, expectedInputs: {}, earnedStickers: [] 
+        };
+        function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+        function showCover() {
+            document.getElementById('workspace').classList.add('hidden-workspace');
+            document.getElementById('workspace').style.display = 'none'; 
+            document.getElementById('success-overlay').style.display = 'none';
+            document.getElementById('progress-bar').style.display = 'none';
+            document.getElementById('cover').style.display = 'flex';}
+        function startGame() {document.getElementById('success-overlay').style.display = 'none';
+            document.getElementById('cover').style.display = 'none';
+            state.questionCount = 0;
+            state.earnedStickers = []; 
+            document.getElementById('workspace').classList.remove('hidden-workspace');
+            document.getElementById('workspace').style.display = 'flex';
+            document.getElementById('progress-bar').style.display = 'block';
+            updateProgress(); nextQuestion();}
+        window.addEventListener('load', showCover);
+        document.getElementById('cover-title').addEventListener('click', startGame);
+        function nextQuestion() {
+            state.step = 1; state.expectedInputs = {};
+            state.num1 = rand(7, 9); 
+            state.num2 = rand(11 - state.num1, 9);
+            renderStep();}
+        function updateProgress() { document.getElementById('progress-fill').style.width = ((state.questionCount / state.maxQuestions) * 100) + '%'; }
+        function questionCompleted() {
+            state.questionCount++; 
+            updateProgress();
+            let newSticker = stickerBank[rand(0, stickerBank.length - 1)];
+            state.earnedStickers.push(newSticker);
+            const overlay = document.getElementById('success-overlay');
+            const overlayMsg = document.getElementById('overlay-msg');
+            const playAgainBtn = document.getElementById('play-again-btn');
+            if (state.questionCount >= state.maxQuestions) {overlayMsg.innerHTML = `🌟 Amazing Job! 🌟<br><span style="color:#333; font-size:min(5vw, 3vh);">Look at all the stickers you collected!</span><br>
+                <div class="sticker-collection">${state.earnedStickers.join('')}</div>`;
+                playAgainBtn.classList.remove('hidden');
+                overlay.style.display = 'flex';
+            } else {
+                overlayMsg.innerHTML = `Great work!<br><span style="color:#333; font-size:min(5vw, 3vh);">You earned a sticker:</span><br>
+                <div class="sticker-display">${newSticker}</div>`;
+                playAgainBtn.classList.add('hidden');
+                overlay.style.display = 'flex';
+                 setTimeout(() => { 
+                    overlay.style.display = 'none'; 
+                    nextQuestion(); 
+                }, 2000); 
+            }
+        }
+        function getTenFrameHTML(blueCubes, orangeCubes = 0, blueCrossed = 0, orangeCrossed = 0, highlight = false) {
+            let glowClass = highlight ? ' frame-glow' : '';
+            let html = `<div class="ten-frame${glowClass}">`;
+            for(let i = 0; i < 10; i++) {
+                html += '<div class="cell">';
+                if (i < blueCubes) { html += `<div class="cube blue${i >= (blueCubes - blueCrossed) ? ' crossed' : ''}"></div>`; }
+                else if (i < blueCubes + orangeCubes) { html += `<div class="cube orange${(i - blueCubes) >= (orangeCubes - orangeCrossed) ? ' crossed' : ''}"></div>`; }
+                html += '</div>';}
+            return html + '</div>';}
+        function getMake10BondHTML(n1, n2, needed, rest, fillInputs = false) {
+            let dis = fillInputs ? 'readonly' : '';
+            return `
+            <div class="make10-bond-zone">
+                <svg viewBox="0 0 220 180" preserveAspectRatio="xMidYMid meet" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:1;">
+                    <line x1="60" y1="35" x2="90" y2="120" stroke="#F5B041" stroke-width="45" stroke-linecap="round" opacity="0.9"/>
+                    <line x1="120" y1="45" x2="85" y2="100" stroke="#004D40" stroke-width="2"/>
+                    <line x1="120" y1="45" x2="160" y2="100" stroke="#004D40" stroke-width="2"/>
+                </svg>
+                <div class="make10-text" style="top: 8%; left: 22%;">${n1}</div>
+                <div class="make10-text" style="top: 8%; left: 38%;">+</div>
+                <div class="make10-text" style="top: 8%; left: 50%;">${n2}</div>
+                <input type="number" id="m10-part1" class="make10-input" ${dis} value="${fillInputs ? needed : ''}" style="top: 55%; left: 27%;">
+                <input type="number" id="m10-part2" class="make10-input" ${dis} value="${fillInputs ? rest : ''}" style="top: 55%; left: 61%;">
+            </div>`;}
+        function createLink(id1, id2, colorClass) {
+            let box1 = document.getElementById(id1);
+            let box2 = document.getElementById(id2);
+            if (!box1 || !box2) return;
+            box1.classList.add(colorClass); box2.classList.add(colorClass);
+            let glowClass = colorClass + '-glow';
+            const addGlow = () => { box1.classList.add(glowClass); box2.classList.add(glowClass); };
+            const removeGlow = () => { box1.classList.remove(glowClass); box2.classList.remove(glowClass); };
+            const syncValue = (e) => {
+                if (e.target === box1) box2.value = box1.value;
+                if (e.target === box2) box1.value = box2.value;};
+            ['focus', 'mouseenter', 'touchstart'].forEach(evt => { box1.addEventListener(evt, addGlow); box2.addEventListener(evt, addGlow); });
+            ['blur', 'mouseleave', 'touchend'].forEach(evt => { box1.addEventListener(evt, removeGlow); box2.addEventListener(evt, removeGlow); });
+            box1.addEventListener('input', syncValue); box2.addEventListener('input', syncValue);
+        }
+        function setupActiveLinks() {
+            if (state.step === 3) {
+                createLink('eq-1', 'm10-part1', 'link-c1'); 
+                createLink('eq-2', 'm10-part2', 'link-c2'); 
+            } 
+        }
+        function renderStep() {
+            const framesContainer = document.getElementById('frames-container');
+            const eqZone = document.getElementById('equation-zone');
+            const inst = document.getElementById('instruction');
+            const make10Bond = document.getElementById('make10-bond-container');
+            make10Bond.classList.add('hidden');
+            document.getElementById('check-btn').classList.remove('hidden'); 
+            document.getElementById('move-cubes-btn').classList.add('hidden');
+            state.expectedInputs = {}; eqZone.innerHTML = '';
+            let n1 = state.num1; let n2 = state.num2; 
+            let needed = 10 - n1; let rest = n2 - needed;
+            if (state.step === 1) {
+                inst.innerHTML = `Step 1: Make 10! Move <b>${needed}</b> orange cubes.`;
+                framesContainer.innerHTML = getTenFrameHTML(n1) + getTenFrameHTML(0, n2);
+                eqZone.innerHTML = `<div class="equation-row">${n1} + ${n2} = ?</div>`;
+                document.getElementById('check-btn').classList.add('hidden'); document.getElementById('move-cubes-btn').classList.remove('hidden');
+            } else if (state.step === 2) {
+                inst.innerHTML = `Step 2: Number Bonds! Split the ${n2}.`;
+                framesContainer.innerHTML = getTenFrameHTML(n1, needed, 0, 0, true) + getTenFrameHTML(0, rest);
+                make10Bond.classList.remove('hidden'); make10Bond.innerHTML = getMake10BondHTML(n1, n2, needed, rest, false);
+                state.expectedInputs['m10-part1'] = needed; state.expectedInputs['m10-part2'] = rest;
+                eqZone.innerHTML = `<div class="equation-row">${n1} + ${n2} = ?</div>`;
+            } else if (state.step === 3) {
+                inst.innerHTML = "Step 3: Complete equations!";
+                framesContainer.innerHTML = getTenFrameHTML(n1, needed, 0, 0, true) + getTenFrameHTML(0, rest);
+                make10Bond.classList.remove('hidden'); make10Bond.innerHTML = getMake10BondHTML(n1, n2, needed, rest, true);
+                eqZone.innerHTML = `
+                    <div class="equation-row">${n1} + <input type="number" id="eq-1" class="eq-input"> = 10</div>
+                    <div class="equation-row">10 + <input type="number" id="eq-2" class="eq-input"> = <input type="number" id="eq-3" class="eq-input"></div>`;
+                state.expectedInputs['eq-1'] = needed; state.expectedInputs['eq-2'] = rest; state.expectedInputs['eq-3'] = 10 + rest;
+            }
+            setTimeout(setupActiveLinks, 50);
+        }
+        function executeMoveCubes() { state.step = 2; renderStep(); }
+        function checkAnswer() {
+            let allCorrect = true;
+            for (let id in state.expectedInputs) {
+                let el = document.getElementById(id);
+                if (!el) continue;
+                 if (parseInt(el.value, 10) === state.expectedInputs[id]) {
+                    el.classList.add('correct-input'); 
+                    el.readOnly = true;
+                    el.classList.remove('wrong-input'); 
+                } else {
+                    allCorrect = false; 
+                    el.classList.add('wrong-input'); 
+                    setTimeout(() => { 
+                        el.classList.remove('wrong-input'); 
+                        el.value = ''; 
+                    }, 800);
+                }
+            }
+            if (allCorrect) {
+                let maxSteps = 3;
+                if (state.step < maxSteps) { state.step++; setTimeout(renderStep, 500); } else { questionCompleted(); }
+            }
+        }
+    </script>
+</body>
+</html>
