@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subtract from 10 First</title>
+    <style>
+        /* Strict 100% viewport containment to prevent scrolling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+            touch-action: manipulation;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; 
+            background-color: #e8f5e9; /* Light green background similar to image */
+            color: #1b5e20;
+        }
+
+        .screen {
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* --- Cover Screen --- */
+        #cover-screen {
+            background-color: #c8e6c9;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .title-card {
+            background: white;
+            padding: 5vmin 8vmin;
+            border-radius: 40px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            border: 4px solid #81c784;
+        }
+
+        h1 {
+            font-size: 8vmin;
+            color: #2e7d32;
+            margin-bottom: 2vmin;
+        }
+
+        /* --- Buttons & Inputs --- */
+        .btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 1.5vmin 5vmin;
+            font-size: 4vmin;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #388e3c;
+            transition: all 0.1s;
+        }
+        .btn:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+        .btn:disabled {
+            background-color: #aaa;
+            box-shadow: 0 4px 0 #888;
+            cursor: not-allowed;
+        }
+
+        input {
+            width: 10vmin;
+            height: 10vmin;
+            text-align: center;
+            font-size: 6vmin;
+            font-family: inherit;
+            font-weight: bold;
+            border: 3px solid #81c784;
+            border-radius: 1.5vmin;
+            outline: none;
+            background: white;
+            color: #1b5e20;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        input:disabled {
+            background-color: #f1f8e9;
+            border-color: #ccc;
+            color: #555;
+        }
+
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; margin: 0; 
+        }
+
+        .error {
+            color: #d32f2f !important;
+            border-color: #d32f2f !important;
+            background-color: #ffebee !important;
+        }
+
+        /* --- Game Screen Layout --- */
+        #game-screen {
+            padding: 1vmin;
+            justify-content: flex-start;
+        }
+
+        .header {
+            font-size: 3.5vmin;
+            font-weight: bold;
+            color: #2e7d32;
+            height: 6%;
+            display: flex;
+            align-items: center;
+        }
+
+        .instruction {
+            font-size: 3.5vmin;
+            font-weight: bold;
+            color: #d32f2f;
+            height: 8%;
+            display: flex;
+            align-items: center;
+            text-align: center;
+            padding: 0 2vmin;
+        }
+
+        /* Flexbox distribution */
+        .manipulatives-zone { height: 26%; display: flex; justify-content: center; align-items: center; gap: 4vmin; }
+        .strategy-zone { height: 30%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;}
+        .steps-zone { height: 22%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5vmin; }
+        .control-zone { height: 8%; display: flex; align-items: center; justify-content: center; }
+
+        /* --- Manipulatives --- */
+        .ten-frame-container { display: flex; flex-direction: column; align-items: center; }
+        .ten-frame {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5vmin;
+            background: rgba(255,255,255,0.7);
+            border: 2px solid #ccc;
+            padding: 0.5vmin;
+            border-radius: 1vmin;
+        }
+        .cell {
+            width: 5vmin;
+            height: 5vmin;
+            border: 2px dashed #aaa;
+            display: flex; justify-content: center; align-items: center; border-radius: 0.5vmin;
+        }
+        .cube {
+            width: 85%; height: 85%; border-radius: 0.5vmin; box-shadow: inset -1px -1px 0px rgba(0,0,0,0.2); transition: all 0.2s;
+        }
+        .cube.blue { background-color: #2196f3; }
+        .cube.orange { background-color: #ff9800; }
+        .cube.interactive { cursor: pointer; animation: pulse 1.5s infinite; }
+        .cube.removed {
+            opacity: 0.2; transform: scale(0.6);
+            background-image: linear-gradient(45deg, transparent 45%, #e74c3c 45%, #e74c3c 55%, transparent 55%), linear-gradient(-45deg, transparent 45%, #e74c3c 45%, #e74c3c 55%, transparent 55%);
+            animation: none; cursor: default;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.7); }
+            50% { transform: scale(1.1); box-shadow: 0 0 10px 5px rgba(33, 150, 243, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(33, 150, 243, 0); }
+        }
+
+        /* --- Strategy Visualization (Image Style) --- */
+        .main-eq-row { font-size: 8vmin; display: flex; align-items: center; gap: 2vmin; font-weight: bold; position: relative; z-index: 2; }
+        .bond-lines-row {
+            display: flex; gap: 6vmin; font-size: 6vmin; line-height: 0.8; font-weight: bold; color: #555; position: relative; left: -5vmin;
+        }
+        .bond-inputs-row {
+            display: flex; gap: 4vmin; align-items: center; position: relative; left: -5vmin; margin-top: 1vmin; z-index: 2;
+        }
+        .bond-number { font-size: 6vmin; font-weight: bold; width: 6vmin; text-align: center; }
+
+        /* The Orange Highlight */
+        .highlight-group {
+            background-color: #ffb74d; /* Orange highlight */
+            border-radius: 3vmin;
+            padding: 1vmin 2vmin;
+            transition: background-color 0.3s;
+        }
+        .highlight-group.active {
+            box-shadow: 0 0 15px #ff9800;
+            background-color: #ffa726;
+        }
+
+        /* --- Bottom Equations --- */
+        .step-equation {
+            font-size: 6vmin;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 2vmin;
+            opacity: 0.3; /* Hidden until reached */
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .step-equation.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* --- Reward Modal --- */
+        #reward-modal {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+        }
+        .reward-content {
+            background: white; padding: 5vmin; border-radius: 30px; text-align: center; animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 5px solid #ffeb3b;
+        }
+        @keyframes popIn { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        .sticker { font-size: 30vmin; margin: 2vmin 0; line-height: 1; text-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .reward-msg { font-size: 6vmin; color: #ff9800; font-weight: bold; margin-bottom: 2vmin; }
+
+    </style>
+</head>
+<body>
+
+    <div id="cover-screen" class="screen active" onclick="startGame()">
+        <div class="title-card">
+            <h1>Subtract from 10 first</h1>
+            <div style="font-size: 20vmin;">☁️</div>
+            <p style="font-size: 4vmin; color: #555; margin-top: 2vmin; font-weight: bold;">Click to start!</p>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div class="header">Question <span id="q-num">1</span> of 5</div>
+        
+        <div class="instruction" id="instruction">Split the number into 10 and the rest.</div>
+
+        <div class="manipulatives-zone">
+            <div class="ten-frame-container">
+                <div class="ten-frame" id="frame-tens"></div>
+            </div>
+            <div class="ten-frame-container">
+                <div class="ten-frame" id="frame-ones"></div>
+            </div>
+        </div>
+
+        <div class="strategy-zone">
+            <div class="main-eq-row">
+                <span id="txt-minuend" style="width: 8vmin; text-align: center;">13</span> 
+                <span> - </span> 
+                <span id="wrapper-subtrahend" style="padding: 1vmin 2vmin; border-radius: 2vmin;"><span id="txt-subtrahend">6</span></span>
+            </div>
+            <div class="bond-lines-row">
+                <span>/</span><span>\</span>
+            </div>
+            <div class="bond-inputs-row">
+                <div class="bond-number" id="txt-ones">3</div>
+                <div id="wrapper-10box" style="padding: 1vmin; border-radius: 2vmin;">
+                    <input type="number" id="input-bond10" autocomplete="off" placeholder="">
+                </div>
+            </div>
+        </div>
+
+        <div class="steps-zone">
+            <div class="step-equation" id="row-eq1">
+                <span>10 - <span id="txt-eq1-sub">6</span> = </span>
+                <input type="number" id="input-eq1-ans" autocomplete="off">
+            </div>
+            <div class="step-equation" id="row-eq2">
+                <input type="number" id="input-eq2-part" autocomplete="off">
+                <span> + <span id="txt-eq2-ones">3</span> = </span>
+                <input type="number" id="input-eq2-ans" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="control-zone">
+            <button class="btn" id="btn-action" onclick="checkStep()">Check</button>
+        </div>
+    </div>
+
+    <div id="reward-modal">
+        <div class="reward-content">
+            <div class="reward-msg">Awesome! You have gotten a sticker!!</div>
+            <div class="sticker" id="sticker-display">⭐️</div>
+            <button class="btn" id="btn-next" onclick="nextQuestion()">Next Question</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Logic ---
+        const MAX_QUESTIONS = 5;
+        let currentQuestionIdx = 1;
+        let currentStep = 0; // 0: Bond, 1: Tap Cubes, 2: Eq 1, 3: Eq 2
+        let qData = {}; 
+        let cubesRemoved = 0;
+
+        // Cute, non-offensive stickers
+        const cuteStickers = ['⭐️', '🌟', '🎈', '🎉', '🐱', '🐶', '🍎', '🚗', '🚀', '🌈'];
+
+        // DOM Map
+        const UI = {
+            screens: { cover: document.getElementById('cover-screen'), game: document.getElementById('game-screen'), reward: document.getElementById('reward-modal') },
+            qNum: document.getElementById('q-num'), instruction: document.getElementById('instruction'),
+            frames: { tens: document.getElementById('frame-tens'), ones: document.getElementById('frame-ones') },
+            txt: { min: document.getElementById('txt-minuend'), sub: document.getElementById('txt-subtrahend'), ones: document.getElementById('txt-ones'), eq1Sub: document.getElementById('txt-eq1-sub'), eq2Ones: document.getElementById('txt-eq2-ones') },
+            inputs: { bond: document.getElementById('input-bond10'), eq1Ans: document.getElementById('input-eq1-ans'), eq2Part: document.getElementById('input-eq2-part'), eq2Ans: document.getElementById('input-eq2-ans') },
+            rows: { eq1: document.getElementById('row-eq1'), eq2: document.getElementById('row-eq2') },
+            wrappers: { sub: document.getElementById('wrapper-subtrahend'), bond10: document.getElementById('wrapper-10box') },
+            btn: document.getElementById('btn-action'), sticker: document.getElementById('sticker-display'), btnNext: document.getElementById('btn-next')
+        };
+
+        function startGame() {
+            UI.screens.cover.classList.remove('active');
+            UI.screens.game.classList.add('active');
+            currentQuestionIdx = 1;
+            loadQuestion();
+        }
+
+        function generateQuestion() {
+            let ones = Math.floor(Math.random() * 8) + 1; // 1-8
+            let min = 10 + ones;
+            let maxSub = Math.min(9, min - 1);
+            let sub = ones + Math.floor(Math.random() * (maxSub - ones)) + 1;
+            return { min: min, sub: sub, ones: ones, ans: min - sub, remaining10: 10 - sub };
+        }
+
+        function loadQuestion() {
+            qData = generateQuestion();
+            currentStep = 0; cubesRemoved = 0;
+            UI.qNum.innerText = currentQuestionIdx;
+            
+            // Render Cubes
+            renderCubes();
+            
+            // Setup Text
+            UI.txt.min.innerText = qData.min;
+            UI.txt.sub.innerText = qData.sub;
+            UI.txt.ones.innerText = qData.ones;
+            UI.txt.eq1Sub.innerText = qData.sub;
+            UI.txt.eq2Ones.innerText = qData.ones;
+            
+            // Reset Inputs & Styles
+            Object.values(UI.inputs).forEach(inp => {
+                inp.value = ''; inp.disabled = false; inp.classList.remove('error');
+            });
+            UI.rows.eq1.classList.remove('active');
+            UI.rows.eq2.classList.remove('active');
+            
+            // Remove highlight classes
+            UI.wrappers.sub.className = '';
+            UI.wrappers.bond10.className = '';
+            
+            // Focus & Instruction
+            UI.instruction.innerText = "Step 1: Fill in the number bond.";
+            UI.btn.style.display = 'block'; UI.btn.innerText = 'Check';
+            UI.inputs.bond.focus();
+        }
+
+        function renderCubes() {
+            UI.frames.tens.innerHTML = ''; UI.frames.ones.innerHTML = '';
+            for(let i=0; i<10; i++) {
+                let cell = document.createElement('div'); cell.className = 'cell';
+                let cube = document.createElement('div'); cube.className = 'cube blue'; cube.id = `cube-${i}`;
+                cell.appendChild(cube); UI.frames.tens.appendChild(cell);
+            }
+            for(let i=0; i<10; i++) {
+                let cell = document.createElement('div'); cell.className = 'cell';
+                if(i < qData.ones) {
+                    let cube = document.createElement('div'); cube.className = 'cube orange';
+                    cell.appendChild(cube);
+                }
+                UI.frames.ones.appendChild(cell);
+            }
+        }
+
+        function checkStep() {
+            if(currentStep === 0) {
+                if(parseInt(UI.inputs.bond.value) === 10) {
+                    UI.inputs.bond.disabled = true;
+                    currentStep = 1;
+                    
+                    // Activate highlighting (Orange group)
+                    UI.wrappers.sub.classList.add('highlight-group', 'active');
+                    UI.wrappers.bond10.classList.add('highlight-group', 'active');
+                    
+                    UI.instruction.innerText = `Step 2: Tap ${qData.sub} blue cubes to subtract them!`;
+                    UI.btn.style.display = 'none'; // Hide check, rely on tapping
+                    
+                    // Enable tapping
+                    for(let i=0; i<10; i++) {
+                        let cube = document.getElementById(`cube-${i}`);
+                        cube.classList.add('interactive');
+                        cube.onclick = function() {
+                            if(currentStep === 1 && !this.classList.contains('removed')) {
+                                this.classList.remove('interactive'); this.classList.add('removed');
+                                cubesRemoved++;
+                                if(cubesRemoved === qData.sub) setTimeout(proceedToEq1, 400);
+                            }
+                        };
+                    }
+                } else {
+                    UI.inputs.bond.classList.add('error');
+                }
+            } 
+            else if(currentStep === 2) {
+                if(parseInt(UI.inputs.eq1Ans.value) === qData.remaining10) {
+                    UI.inputs.eq1Ans.disabled = true;
+                    currentStep = 3;
+                    UI.rows.eq2.classList.add('active');
+                    // Per request: "please say add 4 and 3"
+                    UI.instruction.innerText = `Step 4: Add ${qData.remaining10} and ${qData.ones} to finish!`;
+                    UI.inputs.eq2Part.focus();
+                } else {
+                    UI.inputs.eq1Ans.classList.add('error');
+                }
+            }
+            else if(currentStep === 3) {
+                let v1 = parseInt(UI.inputs.eq2Part.value);
+                let v2 = parseInt(UI.inputs.eq2Ans.value);
+                
+                if(v1 === qData.remaining10 && v2 === qData.ans) {
+                    showReward();
+                } else {
+                    if(v1 !== qData.remaining10) UI.inputs.eq2Part.classList.add('error');
+                    if(v2 !== qData.ans) UI.inputs.eq2Ans.classList.add('error');
+                }
+            }
+        }
+
+        function proceedToEq1() {
+            currentStep = 2;
+            for(let i=0; i<10; i++) document.getElementById(`cube-${i}`).classList.remove('interactive');
+            UI.rows.eq1.classList.add('active');
+            UI.instruction.innerText = "Step 3: Complete the first equation.";
+            UI.btn.style.display = 'block';
+            UI.inputs.eq1Ans.focus();
+        }
+
+        function showReward() {
+            UI.sticker.innerText = cuteStickers[Math.floor(Math.random() * cuteStickers.length)];
+            UI.btnNext.innerText = (currentQuestionIdx >= MAX_QUESTIONS) ? "Play Again" : "Next Question";
+            UI.screens.reward.style.display = 'flex';
+        }
+
+        function nextQuestion() {
+            UI.screens.reward.style.display = 'none';
+            if(currentQuestionIdx >= MAX_QUESTIONS) {
+                currentQuestionIdx = 1; loadQuestion();
+            } else {
+                currentQuestionIdx++; loadQuestion();
+            }
+        }
+
+        // Clear errors on typing
+        Object.values(UI.inputs).forEach(inp => {
+            inp.addEventListener('input', () => inp.classList.remove('error'));
+        });
+
+        // Enter key support
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && UI.screens.game.classList.contains('active') && UI.screens.reward.style.display !== 'flex') {
+                if(UI.btn.style.display !== 'none') checkStep();
+            }
+        });
+
+    </script>
+</body>
+</html>
