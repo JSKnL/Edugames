@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tap-A-Mole: Ordinal Numbers</title>
+    <style>
+        :root {
+            --primary: #4CAF50;
+            --primary-dark: #388E3C;
+            --accent: #FFC107;
+            --bg: #81D4FA;
+            --grass: #8BC34A;
+            --dirt: #3E2723;
+            --mole: #795548;
+            --text: #333;
+            --white: #fff;
+            --danger: #F44336;
+            
+            /* 3D Mallet Cursor */
+            --mallet-cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 64 64" transform="rotate(-30 32 32)"><g><rect x="2" y="15" width="20" height="34" rx="4" fill="%235D4037" stroke="%233E2723" stroke-width="2"/><rect x="8" y="10" width="8" height="5" rx="2" fill="%23FFD54F" stroke="%23FFA000" stroke-width="1.5"/><rect x="4" y="2" width="16" height="15" rx="3" fill="%238D6E63" stroke="%235D4037" stroke-width="2"/><rect x="22" y="27" width="40" height="10" rx="3" fill="%23A1887F" stroke="%23795548" stroke-width="2"/><circle cx="56" cy="32" r="4" fill="%235D4037" stroke="%233E2723" stroke-width="1.5"/></g></svg>') 10 24, auto;
+            
+            /* 3D Mallet Overlay for Animations */
+            --mallet-overlay: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 128 128"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:%238d6e63;stop-opacity:1" /><stop offset="100%" style="stop-color:%235d4037;stop-opacity:1" /></linearGradient><linearGradient id="g2" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" style="stop-color:%23a1887f;stop-opacity:1" /><stop offset="100%" style="stop-color:%23795548;stop-opacity:1" /></linearGradient></defs><g transform="rotate(-35 64 64) scale(1.1 1.1) translate(-20 -10)"><path d="M5 25 Q15 20 25 25 L25 75 Q15 80 5 75 Z" fill="url(%23g1)" stroke="%233e2723" stroke-width="2"/><path d="M25 25 Q35 20 45 25 L45 75 Q35 80 25 75 Z" fill="url(%23g1)" stroke="%233e2723" stroke-width="2"/><path d="M5 25 Q25 15 45 25 L45 35 Q25 25 5 35 Z" fill="%238d6e63" stroke="%233e2723" stroke-width="2"/><rect x="15" y="10" width="20" height="10" rx="2" fill="%23ffd54f" stroke="%23ffa000" stroke-width="2"/><rect x="15" y="80" width="20" height="10" rx="2" fill="%23ffd54f" stroke="%23ffa000" stroke-width="2"/><path d="M45 45 Q55 40 65 45 L115 45 Q125 50 115 55 L65 55 Q55 60 45 55 Z" fill="url(%23g2)" stroke="%23795548" stroke-width="2"/><circle cx="115" cy="50" r="5" fill="%235d4037" stroke="%233e2723" stroke-width="2"/></g></svg>');
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: manipulation; /* Prevents double-tap zoom on iOS */
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+            height: 100vh; 
+            cursor: var(--mallet-cursor);
+            user-select: none; /* Prevents text selection while tapping */
+            -webkit-user-select: none;
+        }
+
+        /* --- Header & UI --- */
+        header {
+            background-color: var(--primary);
+            color: var(--white);
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            z-index: 10;
+            flex-shrink: 0;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            font-size: 1rem;
+            font-weight: bold;
+        }
+
+        /* --- COMPACT SCOREBOARD --- */
+        #massive-score-container {
+            font-size: 2.5rem; 
+            font-weight: 900;
+            color: var(--accent);
+            text-shadow: 
+                2px 2px 0 var(--text), 
+                -2px -2px 0 var(--text), 
+                2px -2px 0 var(--text), 
+                -2px 2px 0 var(--text), 
+                0 5px 10px rgba(0,0,0,0.4);
+            margin: 5px 0;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            letter-spacing: 1px;
+            flex-shrink: 0;
+        }
+
+        #score-display {
+            display: inline-block;
+            transition: transform 0.1s;
+        }
+
+        .score-bump {
+            animation: popMassiveScore 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--white) !important;
+        }
+
+        @keyframes popMassiveScore {
+            0% { transform: scale(1); }
+            30% { transform: scale(1.4) rotate(5deg); }
+            60% { transform: scale(1.2) rotate(-5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        button {
+            background-color: var(--accent);
+            border: none;
+            border-radius: 50px;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--text);
+            cursor: pointer;
+            box-shadow: 0 6px 0 #FF9800;
+            transition: transform 0.1s, box-shadow 0.1s;
+            text-transform: uppercase;
+        }
+
+        button:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #FF9800;
+        }
+
+        /* --- Game Area --- */
+        main {
+            flex: 1;
+            background: linear-gradient(to bottom, var(--bg) 0%, var(--bg) 10%, var(--grass) 10%, var(--grass) 100%);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 5px 10px;
+            overflow: hidden; 
+        }
+
+        /* Target Word Display */
+        #word-display-container {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 5px;
+            z-index: 5;
+            min-height: 40px;
+            flex-shrink: 0;
+        }
+
+        #target-word {
+            background-color: var(--white);
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-size: 1.8rem; 
+            font-weight: 900;
+            color: var(--danger);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 4px solid var(--accent);
+            display: inline-block;
+            text-transform: capitalize;
+            visibility: hidden; 
+        }
+
+        .speaking {
+            animation: pulseWord 0.5s infinite alternate;
+        }
+
+        @keyframes pulseWord {
+            0% { transform: scale(1); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+            100% { transform: scale(1.05); box-shadow: 0 6px 15px rgba(255, 193, 7, 0.8); }
+        }
+
+        /* COMPACT 3x3 Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px; 
+            width: 100%;
+            max-width: 600px; 
+            flex: 1; 
+            max-height: 65vh; 
+            margin-bottom: 10px;
+        }
+
+        /* --- COMPACT Pop-Up Moles --- */
+        .hole-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 80px; 
+        }
+
+        .hole {
+            position: absolute;
+            bottom: 5%; left: 10%; right: 10%;
+            height: 25px; 
+            background-color: var(--dirt);
+            border-radius: 50%;
+            box-shadow: inset 0 -5px 10px rgba(0,0,0,0.9);
+            z-index: 1;
+        }
+
+        .mole-mask {
+            position: absolute;
+            bottom: calc(5% + 10px); 
+            left: 5%; right: 5%;
+            height: 100px; 
+            overflow: hidden; 
+            z-index: 2;
+        }
+
+        .mole {
+            position: absolute;
+            bottom: -110px; 
+            left: 10%;
+            width: 80%;
+            height: 100px; 
+            background: linear-gradient(to right, #4E342E 0%, var(--mole) 50%, #4E342E 100%);
+            border-radius: 40px 40px 8px 8px; 
+            transition: bottom 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 10px;
+            box-shadow: inset 0 6px 10px rgba(0,0,0,0.4);
+            pointer-events: auto; /* Allow tapping */
+        }
+
+        .mole.up {
+            bottom: 0px; 
+        }
+
+        .mole-text {
+            background: var(--white);
+            padding: 4px 10px; 
+            border-radius: 8px;
+            font-size: 1.1rem; 
+            font-weight: 900;
+            color: var(--text);
+            box-shadow: 0 3px 0 #CCC;
+            pointer-events: none; 
+            text-transform: capitalize;
+        }
+
+        /* --- 3D Mallet Overlay --- */
+        #mallet-overlay {
+            position: absolute;
+            width: 100px; 
+            height: 100px;
+            background-image: var(--mallet-overlay);
+            background-size: contain;
+            background-repeat: no-repeat;
+            pointer-events: none; 
+            z-index: 200;
+            visibility: hidden;
+            opacity: 0;
+            transform: translate(-50%, -50%) rotate(-10deg);
+        }
+
+        #mallet-overlay.whack {
+            visibility: visible;
+            opacity: 1;
+            animation: malletWhack 0.2s ease-out forwards;
+        }
+
+        @keyframes malletWhack {
+            0% { transform: translate(-50%, -100%) rotate(-10deg) scale(0.8); }
+            50% { transform: translate(-50%, -50%) rotate(15deg) scale(1.1); }
+            100% { transform: translate(-50%, -50%) rotate(0deg) scale(1.0); opacity: 0; visibility: hidden;}
+        }
+
+        /* --- Confetti & Effects --- */
+        .confetti {
+            position: absolute;
+            width: 10px; height: 10px;
+            pointer-events: none;
+            z-index: 195;
+            border-radius: 3px;
+            animation: burst 0.8s ease-out forwards;
+        }
+
+        @keyframes burst {
+            0% { transform: translate(0, 0) scale(1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0.5) rotate(360deg); opacity: 0; }
+        }
+
+        .impact-flash {
+            position: absolute;
+            border-radius: 50%;
+            background-color: var(--white);
+            transform: translate(-50%, -50%) scale(0);
+            pointer-events: none;
+            z-index: 190;
+            animation: impactFlash 0.3s ease-out forwards;
+        }
+
+        @keyframes impactFlash {
+            0% { width: 0px; height: 0px; opacity: 0.8; transform: translate(-50%, -50%) scale(0.5); }
+            100% { width: 150px; height: 150px; opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+        }
+
+        /* --- Screens & Modals --- */
+        .screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+            text-align: center;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s;
+            cursor: auto; 
+        }
+
+        .screen.active { visibility: visible; opacity: 1; }
+
+        .modal-content {
+            background: var(--white);
+            padding: 40px 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-content h1 { margin-top: 0; font-size: 3rem; margin-bottom: 40px; color: var(--danger); text-shadow: 2px 2px 0px var(--text);}
+
+        #countdown-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 6rem; font-weight: 900; color: var(--accent);
+            text-shadow: 4px 4px 0 #000;
+            z-index: 60; pointer-events: none; display: none;
+        }
+
+        /* Floating Points */
+        .floating-text {
+            position: absolute; font-size: 3rem; font-weight: 900; pointer-events: none;
+            animation: epicFloat 1.2s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 250;
+            text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000, 0 6px 8px rgba(0,0,0,0.5);
+            text-align: center;
+            line-height: 1;
+        }
+        .float-positive { color: var(--accent); }
+        .float-negative { color: var(--danger); font-size: 2.2rem; }
+        
+        @keyframes epicFloat { 
+            0% { transform: translateY(0) scale(0.2); opacity: 0; } 
+            20% { transform: translateY(-30px) scale(1.2); opacity: 1; } 
+            80% { transform: translateY(-70px) scale(1); opacity: 1; }
+            100% { transform: translateY(-90px) scale(1.5); opacity: 0; } 
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <div><h2 style="margin:0; font-size: 1.2rem;">Ordinals Tap</h2></div>
+        <div class="stats">
+            <div>📝 Q: <span id="question-display">1</span>/10</div>
+            <div>🏆 Lvl <span id="level-display">1</span></div>
+        </div>
+    </header>
+
+    <main id="game-container">
+        <div id="massive-score-container">
+            ⭐ <span id="score-display">0</span>
+        </div>
+
+        <div id="word-display-container">
+            <span id="target-word">Get Ready!</span>
+        </div>
+
+        <div id="mallet-overlay"></div>
+        <div id="countdown-overlay">3</div>
+
+        <div class="grid" id="mole-grid">
+            </div>
+    </main>
+
+    <div id="settings-screen" class="screen active">
+        <div class="modal-content">
+            <h1>Tap-A-Mole!</h1>
+            <button onclick="startGame()">▶️ START GAME</button>
+        </div>
+    </div>
+
+    <div id="end-screen" class="screen">
+        <div class="modal-content">
+            <h1>Game Complete! 🎉</h1>
+            <h2>You conquered the grid!</h2>
+            <h3 style="font-size: 2.5rem; color: var(--accent); text-shadow: 2px 2px 0 #000; margin: 10px 0;">Final Score:<br><span id="final-score">0</span></h3>
+            <button onclick="startGame()" style="margin-top: 10px; background-color: var(--primary); color: white;">🔄 Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        let vocabPairs = [
+            { word: "first", number: "1st" },
+            { word: "second", number: "2nd" },
+            { word: "third", number: "3rd" },
+            { word: "fourth", number: "4th" },
+            { word: "fifth", number: "5th" },
+            { word: "sixth", number: "6th" },
+            { word: "seventh", number: "7th" },
+            { word: "eighth", number: "8th" },
+            { word: "ninth", number: "9th" },
+            { word: "tenth", number: "10th" }
+        ];
+
+        let score = 0;
+        let level = 1;
+        let questionsInCurrentLevel = 1; 
+        const maxLevels = 3;
+        const questionsPerLevel = 10;
+        
+        let minDelay = 100, maxDelay = 300; 
+        let minStay = 2000, maxStay = 3000;   
+        let molesToSpawn = 3; 
+        
+        let isPlaying = false;
+        let currentPrompt = ""; 
+        let currentAnswer = ""; 
+        let currentMode = 1;    
+        let currentTargetPair = null; 
+        
+        let moleHideTimeout;
+        let moleSpawnTimeout;
+        
+        const grid = document.getElementById('mole-grid');
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisp = document.getElementById('score-display');
+        const questionDisp = document.getElementById('question-display');
+        const levelDisp = document.getElementById('level-display');
+        const countdownOverlay = document.getElementById('countdown-overlay');
+        const targetWordDisplay = document.getElementById('target-word');
+        const malletOverlay = document.getElementById('mallet-overlay');
+
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playTone(freq, type, time, dur) {
+            if(!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, time);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            gain.gain.setValueAtTime(0, time);
+            gain.gain.linearRampToValueAtTime(0.3, time + 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.01, time + dur);
+            
+            osc.start(time);
+            osc.stop(time + dur);
+        }
+
+        function playSound(type) {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            
+            if (type === 'correct') {
+                playTone(523.25, 'sine', now, 0.3); 
+                playTone(659.25, 'sine', now + 0.08, 0.3); 
+                playTone(783.99, 'sine', now + 0.16, 0.5); 
+            } else if (type === 'error') {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.type = 'sawtooth'; 
+                osc.frequency.setValueAtTime(250, now); 
+                osc.frequency.exponentialRampToValueAtTime(100, now + 0.4);
+                gain.gain.setValueAtTime(0.4, now); 
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
+            } else if (type === 'level') {
+                playTone(440, 'triangle', now, 0.2);
+                playTone(554, 'triangle', now + 0.2, 0.2);
+                playTone(659, 'triangle', now + 0.4, 0.5);
+            }
+        }
+
+        function randomTime(min, max) {
+            return Math.round(Math.random() * (max - min) + min);
+        }
+
+        function createGrid() {
+            grid.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const container = document.createElement('div');
+                container.className = 'hole-container';
+                
+                const mask = document.createElement('div'); mask.className = 'mole-mask';
+                const mole = document.createElement('div'); mole.className = 'mole';
+                
+                // Touch and click handlers for iPads
+                mole.addEventListener('touchstart', (e) => { e.preventDefault(); handleWhack(e, i); });
+                mole.addEventListener('mousedown', (e) => { handleWhack(e, i); });
+
+                const text = document.createElement('div'); text.className = 'mole-text';
+                const hole = document.createElement('div'); hole.className = 'hole';
+
+                mole.appendChild(text); mask.appendChild(mole);
+                container.appendChild(mask); container.appendChild(hole); grid.appendChild(container);
+            }
+        }
+
+        function updateLevelSpeed() {
+            if (level === 1) { 
+                minDelay = 100; maxDelay = 300;   
+                minStay = 2000; maxStay = 3000;   
+                molesToSpawn = 3; 
+            } else if (level === 2) { 
+                minDelay = 200; maxDelay = 500;   
+                minStay = 2000; maxStay = 3000;   
+                molesToSpawn = 5; 
+            } else if (level === 3) { 
+                minDelay = 300; maxDelay = 600;   
+                minStay = 2500; maxStay = 3500;   
+                molesToSpawn = 8; 
+            }
+        }
+
+        function startGame() {
+            initAudio(); 
+            
+            document.getElementById('settings-screen').classList.remove('active');
+            document.getElementById('end-screen').classList.remove('active');
+            createGrid();
+            
+            score = 0; 
+            level = 1; 
+            questionsInCurrentLevel = 1;
+            
+            updateLevelSpeed(); 
+            updateUI();
+            
+            targetWordDisplay.style.visibility = 'hidden';
+            countdownOverlay.style.display = 'flex';
+            
+            let count = 3; countdownOverlay.innerText = count;
+            const countInterval = setInterval(() => {
+                count--;
+                if (count > 0) { countdownOverlay.innerText = count; } 
+                else if (count === 0) { countdownOverlay.innerText = "GO!"; playSound('level'); } 
+                else {
+                    clearInterval(countInterval);
+                    countdownOverlay.style.display = 'none';
+                    targetWordDisplay.style.visibility = 'visible';
+                    isPlaying = true;
+                    nextRound();
+                }
+            }, 1000);
+        }
+
+        function nextRound() {
+            if (!isPlaying) return;
+            document.querySelectorAll('.mole').forEach(m => m.classList.remove('up'));
+            updateUI();
+            
+            currentTargetPair = vocabPairs[Math.floor(Math.random() * vocabPairs.length)];
+            
+            if (level === 1) {
+                currentMode = 1; // Word to Number
+            } else if (level === 2) {
+                currentMode = 2; // Number to Word
+            } else {
+                currentMode = Math.random() < 0.5 ? 1 : 2; // Random Mix
+            }
+
+            if (currentMode === 1) {
+                currentPrompt = currentTargetPair.word;
+                currentAnswer = currentTargetPair.number;
+            } else {
+                currentPrompt = currentTargetPair.number;
+                currentAnswer = currentTargetPair.word;
+            }
+
+            targetWordDisplay.innerText = currentPrompt;
+            targetWordDisplay.classList.add('speaking'); 
+
+            // Allow the user roughly 1 second to read the word before popping the moles
+            const spawnDelay = randomTime(800, 1200);
+            clearTimeout(moleSpawnTimeout);
+            moleSpawnTimeout = setTimeout(() => { 
+                targetWordDisplay.classList.remove('speaking');
+                spawnMoles(); 
+            }, spawnDelay); 
+        }
+
+        function spawnMoles() {
+            if (!isPlaying) return;
+            
+            const holes = [...document.querySelectorAll('.mole')].sort(() => 0.5 - Math.random()).slice(0, molesToSpawn);
+            
+            let options = [currentAnswer];
+            let distractors = vocabPairs.filter(p => p.word !== currentTargetPair.word).sort(() => 0.5 - Math.random());
+            
+            while (options.length < molesToSpawn) {
+                for(let i = 0; i < distractors.length && options.length < molesToSpawn; i++) {
+                    let optionText = currentMode === 1 ? distractors[i].number : distractors[i].word;
+                    if(!options.includes(optionText)) {
+                        options.push(optionText);
+                    }
+                }
+            }
+            
+            options.sort(() => 0.5 - Math.random()); 
+
+            holes.forEach((mole, index) => {
+                mole.dataset.answer = options[index];
+                mole.querySelector('.mole-text').innerText = options[index];
+                mole.classList.add('up');
+            });
+
+            const stayUpTime = randomTime(minStay, maxStay);
+            clearTimeout(moleHideTimeout);
+            
+            moleHideTimeout = setTimeout(() => { 
+                if(isPlaying) {
+                    document.querySelectorAll('.mole').forEach(m => m.classList.remove('up'));
+                    concludeQuestion();
+                }
+            }, stayUpTime);
+        }
+
+        function handleWhack(e, index) {
+            if (!isPlaying) return;
+            const mole = e.currentTarget;
+            if (!mole.classList.contains('up')) return; 
+
+            // Extract touch coordinates safely for iPads
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+
+            const clickedAnswer = mole.dataset.answer;
+            clearTimeout(moleHideTimeout); 
+            visualizeMalletStrike(clientX, clientY);
+
+            if (clickedAnswer === currentAnswer) {
+                playSound('correct'); 
+                score += 10;
+                showFloatingText(clientX, clientY, "AWESOME!\n+10", "float-positive");
+                animateScore();
+                createConfettiBurst(clientX, clientY);
+            } else {
+                playSound('error'); 
+                score -= 5;
+                showFloatingText(clientX, clientY, "OOPS!\n-5", "float-negative");
+            }
+            
+            mole.classList.remove('up');
+            document.querySelectorAll('.mole').forEach(m => m.classList.remove('up'));
+            
+            setTimeout(concludeQuestion, 800); 
+        }
+        
+        function concludeQuestion() {
+            if (!isPlaying) return;
+            
+            if (questionsInCurrentLevel < questionsPerLevel) {
+                questionsInCurrentLevel++;
+                nextRound();
+            } else {
+                if (level >= maxLevels) {
+                    endGame(); 
+                } else {
+                    level++;
+                    questionsInCurrentLevel = 1;
+                    updateLevelSpeed();
+                    playSound('level');
+                    showFloatingText(window.innerWidth/2, window.innerHeight/2, "LEVEL " + level + "!", "float-positive");
+                    setTimeout(nextRound, 1500); 
+                }
+            }
+        }
+
+        function visualizeMalletStrike(xPos, yPos) {
+            const rect = gameContainer.getBoundingClientRect();
+            const x = xPos - rect.left; const y = yPos - rect.top;
+            
+            malletOverlay.style.left = `${x}px`; malletOverlay.style.top = `${y}px`;
+            malletOverlay.classList.remove('whack'); void malletOverlay.offsetWidth; malletOverlay.classList.add('whack');
+            
+            const flash = document.createElement('div'); flash.className = 'impact-flash';
+            flash.style.left = `${x}px`; flash.style.top = `${y}px`;
+            gameContainer.appendChild(flash);
+            setTimeout(() => { gameContainer.removeChild(flash); }, 300);
+        }
+
+        function createConfettiBurst(x, y) {
+            const colors = ['#FFC107', '#F44336', '#4CAF50', '#2196F3', '#9C27B0'];
+            for(let i = 0; i < 20; i++) {
+                const conf = document.createElement('div');
+                conf.className = 'confetti';
+                conf.style.left = `${x}px`;
+                conf.style.top = `${y}px`;
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 100 + 30;
+                const dx = Math.cos(angle) * distance;
+                const dy = Math.sin(angle) * distance;
+                
+                conf.style.setProperty('--dx', `${dx}px`);
+                conf.style.setProperty('--dy', `${dy}px`);
+                
+                document.body.appendChild(conf);
+                setTimeout(() => { conf.remove(); }, 800);
+            }
+        }
+
+        function showFloatingText(x, y, text, className) {
+            const el = document.createElement('div'); el.className = `floating-text ${className}`;
+            el.innerText = text; el.style.left = `${x}px`; el.style.top = `${y - 30}px`;
+            el.style.transform = 'translate(-50%, 0)'; 
+            document.body.appendChild(el);
+            setTimeout(() => { document.body.removeChild(el); }, 1200);
+        }
+
+        function animateScore() {
+            scoreDisp.innerText = score;
+            scoreDisp.classList.remove('score-bump');
+            void scoreDisp.offsetWidth; 
+            scoreDisp.classList.add('score-bump');
+        }
+
+        function updateUI() { 
+            scoreDisp.innerText = score; 
+            questionDisp.innerText = questionsInCurrentLevel; 
+            levelDisp.innerText = level; 
+        }
+
+        function endGame() {
+            isPlaying = false; 
+            clearTimeout(moleHideTimeout);
+            clearTimeout(moleSpawnTimeout);
+            document.querySelectorAll('.mole').forEach(m => m.classList.remove('up')); 
+            
+            document.getElementById('final-score').innerText = score; 
+            targetWordDisplay.style.visibility = 'hidden'; 
+            playSound('level');
+            document.getElementById('end-screen').classList.add('active');
+        }
+
+    </script>
+</body>
+</html>
