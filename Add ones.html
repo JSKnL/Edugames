@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Add the Ones First</title>
+    <style>
+        /* BASE STYLES & RESET */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Comic Sans MS', 'Arial Rounded MT Bold', sans-serif; }
+        
+        body, html {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; 
+            background-color: #eef7e6; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- NEW: COVER SCREEN STYLES --- */
+        #cover-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #d1e7dd; /* Matching the header theme */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000; /* Sit on top of everything */
+            transition: opacity 0.5s ease-out;
+            background-image: radial-gradient(circle, #eaf4ed 10%, #badbcc 100%);
+        }
+
+        #start-title {
+            font-size: 8vh;
+            color: #0f5132;
+            background: white;
+            padding: 30px 50px;
+            border-radius: 30px;
+            border: 5px solid #004d40;
+            cursor: pointer;
+            box-shadow: 0 15px 25px rgba(0,0,0,0.15);
+            transition: all 0.2s ease;
+            text-align: center;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        #start-title:hover {
+            transform: scale(1.05);
+            box-shadow: 0 20px 35px rgba(0,0,0,0.25);
+            background: #f8f9fa;
+        }
+
+        #start-title:active {
+            transform: scale(0.95);
+        }
+
+        .cover-instruction {
+            margin-top: 25px;
+            font-size: 3vh;
+            color: #114b32;
+            font-weight: bold;
+            opacity: 0.8;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        /* ------------------------------- */
+
+        #app {
+            width: 100%;
+            height: 100%;
+            max-width: 900px; 
+            display: flex;
+            flex-direction: column;
+            background: white;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        /* HEADER & STICKER BOARD */
+        header {
+            flex: 0 0 10%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #d1e7dd;
+            color: #0f5132;
+            font-size: 2.5vh;
+            font-weight: bold;
+            border-bottom: 3px solid #badbcc;
+            padding: 0 20px;
+        }
+
+        #sticker-board {
+            font-size: 3.5vh; 
+            letter-spacing: 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        /* MAIN CONTENT AREA */
+        #content {
+            flex: 1 1 70%;
+            display: flex;
+            flex-direction: row;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        /* LEFT PANEL: MANIPULATIVES (CUBES) */
+        #left-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 10px;
+            border: 2px dashed #ccc;
+        }
+
+        .frame-container { 
+            margin-bottom: 15px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            padding: 5px;
+            border-radius: 10px;
+            transition: all 0.4s ease;
+            border: 2px solid transparent;
+        }
+        
+        .frame-label { font-size: 1.8vh; color: #555; margin-bottom: 5px; font-weight: bold;}
+        
+        .ten-frame {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 3px;
+            background: white;
+            border: 3px solid #333;
+            padding: 4px;
+            width: 160px;
+            height: 70px;
+        }
+
+        .cube {
+            width: 100%;
+            height: 100%;
+            border-radius: 4px;
+            border: 1px solid rgba(0,0,0,0.2);
+            transition: all 0.4s ease-in-out;
+            opacity: 0; 
+            transform: scale(0.8);
+        }
+
+        .cube.blue { background-color: #3b82f6; opacity: 1; transform: scale(1); box-shadow: inset -2px -2px 0px rgba(0,0,0,0.2); }
+        .cube.orange { background-color: #f97316; opacity: 1; transform: scale(1); box-shadow: inset -2px -2px 0px rgba(0,0,0,0.2); }
+
+        /* HIGHLIGHT CLASSES FOR PEDAGOGY */
+        .highlight-text {
+            color: #ef4444 !important; 
+            text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+            transform: scale(1.3);
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+
+        .highlight-input {
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.5) !important;
+            background: #fef2f2 !important;
+            color: #b91c1c !important;
+        }
+
+        .highlight-frame {
+            border-color: #eab308 !important; 
+            background-color: #fefce8 !important;
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.5) !important;
+        }
+
+        /* RIGHT PANEL: MATH EQUATIONS AND BONDS */
+        #right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 20px;
+        }
+
+        #bond-area {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .main-eq { font-size: 4vh; font-weight: bold; color: #004d40; display: flex; gap: 15px; }
+        
+        .bond-lines {
+            width: 80px;
+            height: 40px;
+            position: relative;
+        }
+        
+        svg.lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+        .bond-inputs {
+            display: flex;
+            gap: 20px;
+        }
+
+        /* EQUATION AREA */
+        #equation-area {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background: #eef7e6;
+            padding: 15px;
+            border-radius: 20px;
+            border: 2px solid #a3cfb4;
+        }
+
+        .eq-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 3vh;
+            font-weight: bold;
+            color: #114b32;
+        }
+
+        /* INPUT FIELDS */
+        input[type="number"] {
+            width: 3.5rem; 
+            height: 3.5rem;
+            font-size: 2rem;
+            text-align: center;
+            border: 3px solid #ccc;
+            border-radius: 12px;
+            background: white;
+            color: #333;
+            padding: 0; 
+            box-sizing: border-box;
+            transition: all 0.3s;
+        }
+        
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        input:disabled { background: #f0f0f0; border-color: #ddd; color: #888; }
+        input.active { border-color: #3b82f6; box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); background: #eff6ff;}
+        input.correct { border-color: #22c55e !important; background: #f0fdf4 !important; color: #166534 !important; box-shadow: none !important;}
+        input.wrong { border-color: #ef4444 !important; background: #fef2f2 !important; color: #b91c1c !important; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4) !important;}
+
+        /* FOOTER CONTROLS */
+        footer {
+            flex: 0 0 20%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f1f5f9;
+            border-top: 2px solid #cbd5e1;
+            padding: 10px;
+        }
+
+        #message { font-size: 2.2vh; font-weight: bold; color: #0369a1; margin-bottom: 10px; text-align: center; height: 3vh;}
+
+        button {
+            padding: 12px 24px;
+            font-size: 2.5vh;
+            font-weight: bold;
+            color: white;
+            background-color: #3b82f6;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background 0.2s;
+            z-index: 10;
+        }
+
+        button:hover { background-color: #2563eb; }
+        button.btn-success { background-color: #22c55e; }
+        button.btn-success:hover { background-color: #16a34a; }
+        button.btn-warning { background-color: #f59e0b; }
+        button.btn-warning:hover { background-color: #d97706; }
+
+        /* BIG STICKER OVERLAY ANIMATION */
+        #big-sticker-overlay {
+            position: fixed;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            font-size: 25vh;
+            pointer-events: none;
+            z-index: 1000;
+            filter: drop-shadow(0 0 25px rgba(255, 215, 0, 0.9));
+            transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.4s ease-out;
+            opacity: 0;
+        }
+        #big-sticker-overlay.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        /* Animation for new mini stickers on the board */
+        @keyframes pop {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .new-sticker { display: inline-block; animation: pop 0.5s ease-out forwards; }
+
+    </style>
+</head>
+<body>
+
+<div id="cover-screen">
+    <div id="start-title">Add the ones first!</div>
+    <div class="cover-instruction">(Click the title to begin)</div>
+</div>
+
+<div id="big-sticker-overlay"></div>
+
+<div id="app">
+    <header>
+        <div>Question <span id="q-counter">1</span> / 5</div>
+        <div id="sticker-board" title="Your Rewards!"></div>
+    </header>
+
+    <div id="content">
+        <div id="left-panel">
+            <div class="frame-container" id="container-tens">
+                <div class="frame-label">Tens</div>
+                <div class="ten-frame" id="frame-tens"></div>
+            </div>
+            <div class="frame-container" id="container-ones-1">
+                <div class="frame-label">First Number (Ones)</div>
+                <div class="ten-frame" id="frame-ones-1"></div>
+            </div>
+            <div class="frame-container" id="container-ones-2">
+                <div class="frame-label">Second Number (Ones)</div>
+                <div class="ten-frame" id="frame-ones-2"></div>
+            </div>
+        </div>
+
+        <div id="right-panel">
+            <div id="bond-area">
+                <div class="main-eq">
+                    <span id="num1-display">13</span> + <span id="num2-display">4</span>
+                </div>
+                <div class="bond-lines" style="margin-left: -40px;">
+                    <svg class="lines">
+                        <line x1="40" y1="0" x2="10" y2="40" stroke="#004d40" stroke-width="3" />
+                        <line x1="40" y1="0" x2="70" y2="40" stroke="#004d40" stroke-width="3" />
+                    </svg>
+                </div>
+                <div class="bond-inputs" style="margin-left: -40px;">
+                    <input type="number" id="in-bond10" disabled>
+                    <input type="number" id="in-bond-ones" disabled>
+                </div>
+            </div>
+
+            <div id="equation-area">
+                <div class="eq-row">
+                    <input type="number" id="in-eq1-a" disabled> + <input type="number" id="in-eq1-b" disabled> = <input type="number" id="in-eq1-ans" disabled>
+                </div>
+                <div class="eq-row">
+                    <input type="number" id="in-eq2-a" disabled> + <input type="number" id="in-eq2-b" disabled> = <input type="number" id="in-eq2-ans" disabled>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div id="message">Loading...</div>
+        <button id="action-btn">Check Answer</button>
+    </footer>
+</div>
+
+<script>
+    /* MATH LOGIC AND DATA CONFIGURATION */
+    const questions = [
+        { total: 13, add: 2, ten: 10, ones: 3, sumOnes: 5, finalSum: 15 },
+        { total: 15, add: 4, ten: 10, ones: 5, sumOnes: 9, finalSum: 19 },
+        { total: 12, add: 4, ten: 10, ones: 2, sumOnes: 6, finalSum: 16 },
+        { total: 14, add: 3, ten: 10, ones: 4, sumOnes: 7, finalSum: 17 },
+        { total: 11, add: 7, ten: 10, ones: 1, sumOnes: 8, finalSum: 18 }
+    ];
+
+    const rewards = ['🐰', '🦊', '🐻', '🐼', '🐯'];
+
+    let currentQIndex = 0;
+    let currentQ = questions[currentQIndex];
+    let onesBondInput = null; 
+
+    /* DOM ELEMENTS */
+    const coverScreen = document.getElementById("cover-screen");
+    const startTitle = document.getElementById("start-title");
+
+    const msgEl = document.getElementById("message");
+    const btnEl = document.getElementById("action-btn");
+    const stickerBoard = document.getElementById("sticker-board");
+    const bigStickerOverlay = document.getElementById("big-sticker-overlay");
+    
+    const qCounter = document.getElementById("q-counter");
+    const num1Disp = document.getElementById("num1-display");
+    const num2Disp = document.getElementById("num2-display");
+    
+    const frameTens = document.getElementById("frame-tens");
+    const frameOnes1 = document.getElementById("frame-ones-1");
+    const frameOnes2 = document.getElementById("frame-ones-2");
+
+    const containerTens = document.getElementById("container-tens");
+    const containerOnes1 = document.getElementById("container-ones-1");
+
+    const iBond10 = document.getElementById("in-bond10");
+    const iBondOnes = document.getElementById("in-bond-ones");
+    
+    const iEq1a = document.getElementById("in-eq1-a");
+    const iEq1b = document.getElementById("in-eq1-b");
+    const iEq1ans = document.getElementById("in-eq1-ans");
+    
+    const iEq2a = document.getElementById("in-eq2-a");
+    const iEq2b = document.getElementById("in-eq2-b");
+    const iEq2ans = document.getElementById("in-eq2-ans");
+
+    // Start screen interaction
+    startTitle.addEventListener("click", () => {
+        coverScreen.style.opacity = '0';
+        setTimeout(() => {
+            coverScreen.style.display = 'none';
+        }, 500); // Wait for the fade out to finish
+    });
+
+    // Remove red error state when a user interacts with the input
+    document.querySelectorAll('input[type="number"]').forEach(input => {
+        input.addEventListener('input', () => input.classList.remove('wrong'));
+        input.addEventListener('focus', () => input.classList.remove('wrong'));
+    });
+
+    // Helper function to clear all wrong classes at once
+    function clearAllErrors() {
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.classList.remove('wrong');
+        });
+    }
+
+    function initFrames() {
+        frameTens.innerHTML = ''; frameOnes1.innerHTML = ''; frameOnes2.innerHTML = '';
+        for(let i=0; i<10; i++) {
+            frameTens.innerHTML += `<div class="cube" id="t-${i}"></div>`;
+            frameOnes1.innerHTML += `<div class="cube" id="o1-${i}"></div>`;
+            frameOnes2.innerHTML += `<div class="cube" id="o2-${i}"></div>`;
+        }
+    }
+
+    function loadQuestion() {
+        currentQ = questions[currentQIndex];
+        qCounter.innerText = currentQIndex + 1;
+        num1Disp.innerText = currentQ.total;
+        num2Disp.innerText = currentQ.add;
+        onesBondInput = null;
+
+        resetInputsAndHighlights();
+        initFrames();
+        drawInitialCubes();
+        
+        msgEl.innerText = `Step 1: Split ${currentQ.total} into 10 and ${currentQ.ones} in the Number Bond.`;
+        btnEl.innerText = "Check Answer";
+        btnEl.className = "";
+        btnEl.style.display = "block";
+        btnEl.onclick = checkBond;
+
+        iBond10.disabled = false; iBondOnes.disabled = false;
+        iBond10.classList.add("active"); iBondOnes.classList.add("active");
+    }
+
+    function resetInputsAndHighlights() {
+        const allInputs = [iBond10, iBondOnes, iEq1a, iEq1b, iEq1ans, iEq2a, iEq2b, iEq2ans];
+        allInputs.forEach(input => {
+            input.value = "";
+            input.disabled = true;
+            input.classList.remove("active", "correct", "wrong", "highlight-input");
+        });
+        num2Disp.classList.remove("highlight-text");
+        containerTens.classList.remove("highlight-frame");
+        containerOnes1.classList.remove("highlight-frame");
+    }
+
+    function drawInitialCubes() {
+        for(let i=0; i<10; i++) document.getElementById(`t-${i}`).className = "cube blue";
+        for(let i=0; i<currentQ.ones; i++) document.getElementById(`o1-${i}`).className = "cube blue";
+        for(let i=0; i<currentQ.add; i++) document.getElementById(`o2-${i}`).className = "cube orange";
+    }
+
+    /* --- STEP 1: CHECK NUMBER BOND --- */
+    function checkBond() {
+        clearAllErrors();
+        const val1 = parseInt(iBond10.value);
+        const val2 = parseInt(iBondOnes.value);
+        let isCorrect = false;
+
+        if (val1 === currentQ.ten && val2 === currentQ.ones) {
+            isCorrect = true;
+            onesBondInput = iBondOnes; 
+        } else if (val1 === currentQ.ones && val2 === currentQ.ten) {
+            isCorrect = true;
+            onesBondInput = iBond10;
+        }
+
+        if (isCorrect) {
+            iBond10.classList.replace("active", "correct");
+            iBondOnes.classList.replace("active", "correct");
+            iBond10.disabled = true; iBondOnes.disabled = true;
+
+            msgEl.innerText = "Step 2: Click 'Move Cubes' to join the ones together.";
+            btnEl.innerText = "Move Cubes";
+            btnEl.className = "btn-warning"; 
+            btnEl.onclick = executeMoveCubes;
+        } else {
+            iBond10.classList.add("wrong");
+            iBondOnes.classList.add("wrong");
+            msgEl.innerText = `Try again! Split ${currentQ.total} into 10 and ${currentQ.ones}.`;
+        }
+    }
+
+    /* --- STEP 2: MOVE CUBES & HIGHLIGHT ONES --- */
+    function executeMoveCubes() {
+        for(let i=0; i<10; i++) document.getElementById(`o2-${i}`).className = "cube"; 
+
+        for(let i=0; i<currentQ.add; i++) {
+            let targetIndex = currentQ.ones + i;
+            if(targetIndex < 10) document.getElementById(`o1-${targetIndex}`).className = "cube orange";
+        }
+
+        num2Disp.classList.add("highlight-text");
+        if (onesBondInput) onesBondInput.classList.add("highlight-input");
+
+        // DYNAMIC INSTRUCTION: STRICT LEFT-TO-RIGHT ORDER (Ones then Add)
+        msgEl.innerText = `Step 3: Add ${currentQ.ones} and ${currentQ.add} together.`;
+        btnEl.innerText = "Check Answer";
+        btnEl.className = "";
+        btnEl.onclick = checkEq1;
+
+        iEq1a.disabled = false; iEq1b.disabled = false; iEq1ans.disabled = false;
+        iEq1a.classList.add("active"); iEq1b.classList.add("active"); iEq1ans.classList.add("active");
+    }
+
+    /* --- STEP 3: CHECK ONES EQ (STRICT ORDER) & HIGHLIGHT FINAL FRAMES --- */
+    function checkEq1() {
+        clearAllErrors();
+        const a = parseInt(iEq1a.value);
+        const b = parseInt(iEq1b.value);
+        const ans = parseInt(iEq1ans.value);
+
+        // STRICT ORDER: First number's ones + Second number
+        const isCorrectEq = (a === currentQ.ones && b === currentQ.add);
+        const isCorrectAns = (ans === currentQ.sumOnes);
+
+        if (isCorrectEq && isCorrectAns) {
+            num2Disp.classList.remove("highlight-text");
+            if (onesBondInput) {
+                onesBondInput.classList.remove("highlight-input");
+                onesBondInput.classList.add("correct");
+            }
+
+            containerTens.classList.add("highlight-frame");
+            containerOnes1.classList.add("highlight-frame");
+
+            iEq1a.classList.replace("active", "correct");
+            iEq1b.classList.replace("active", "correct");
+            iEq1ans.classList.replace("active", "correct");
+            iEq1a.disabled = true; iEq1b.disabled = true; iEq1ans.disabled = true;
+
+            msgEl.innerText = `Step 4: Now add 10 and ${currentQ.sumOnes} to complete the equation.`;
+            btnEl.onclick = checkEq2;
+
+            iEq2a.disabled = false; iEq2b.disabled = false; iEq2ans.disabled = false;
+            iEq2a.classList.add("active"); iEq2b.classList.add("active"); iEq2ans.classList.add("active");
+        } else {
+            if (a !== currentQ.ones) iEq1a.classList.add("wrong");
+            if (b !== currentQ.add) iEq1b.classList.add("wrong");
+            if (!isCorrectAns) iEq1ans.classList.add("wrong");
+            
+            msgEl.innerText = `Try again! Add ${currentQ.ones} and ${currentQ.add}.`;
+        }
+    }
+
+    /* --- STEP 4: CHECK FINAL EQUATION (STRICT ORDER) & AWARD BIG STICKER --- */
+    function checkEq2() {
+        clearAllErrors(); 
+        const a = parseInt(iEq2a.value);
+        const b = parseInt(iEq2b.value);
+        const ans = parseInt(iEq2ans.value);
+
+        // STRICT ORDER: 10 + Combined Ones
+        const isCorrectEq = (a === currentQ.ten && b === currentQ.sumOnes);
+        const isCorrectAns = (ans === currentQ.finalSum);
+
+        if (isCorrectEq && isCorrectAns) {
+            iEq2a.classList.replace("active", "correct");
+            iEq2b.classList.replace("active", "correct");
+            iEq2ans.classList.replace("active", "correct");
+            iEq2a.disabled = true; iEq2b.disabled = true; iEq2ans.disabled = true;
+
+            containerTens.classList.remove("highlight-frame");
+            containerOnes1.classList.remove("highlight-frame");
+
+            // Add sticker to the mini-board
+            const currentSticker = rewards[currentQIndex];
+            const sticker = document.createElement("span");
+            sticker.className = "new-sticker";
+            sticker.innerText = currentSticker;
+            stickerBoard.appendChild(sticker);
+
+            // Pop up the massive giant sticker
+            bigStickerOverlay.innerText = currentSticker;
+            bigStickerOverlay.classList.add("show");
+
+            currentQIndex++;
+            if (currentQIndex < questions.length) {
+                msgEl.innerText = "Awesome! You have gotten a sticker!!";
+                btnEl.innerText = "Next Question";
+                btnEl.className = "btn-success";
+                btnEl.onclick = () => {
+                    bigStickerOverlay.classList.remove("show"); // Hide big sticker
+                    loadQuestion();
+                };
+            } else {
+                msgEl.innerText = "Awesome! You have gotten a sticker!! 🎉 All Done! 🎉";
+                btnEl.innerText = "Play Again";
+                btnEl.className = "btn-success";
+                btnEl.onclick = () => {
+                    bigStickerOverlay.classList.remove("show"); // Hide big sticker
+                    restartGame();
+                };
+            }
+        } else {
+            if (a !== currentQ.ten) iEq2a.classList.add("wrong");
+            if (b !== currentQ.sumOnes) iEq2b.classList.add("wrong");
+            if (!isCorrectAns) iEq2ans.classList.add("wrong");
+
+            msgEl.innerText = `Try again! Add 10 and ${currentQ.sumOnes}.`;
+        }
+    }
+
+    /* --- RESTART GAME --- */
+    function restartGame() {
+        currentQIndex = 0;
+        stickerBoard.innerHTML = ''; // Clear stickers for the new game
+        loadQuestion();
+    }
+
+    // Initialize the background app behind the cover screen
+    window.onload = loadQuestion;
+
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
