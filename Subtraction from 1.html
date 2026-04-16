@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subtract From Ones First</title>
+    <style>
+        /* CSS resets and strict 100vh constraints to prevent scrolling */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Comic Sans MS', 'Chalkboard SE', sans-serif;
+        }
+
+        body {
+            background-color: #f0fdf4; 
+            color: #333;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden; /* STRICT 100% PARAMETERS - NO SCROLLING */
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* START COVER SCREEN */
+        #cover-screen {
+            position: absolute;
+            top: 0; 
+            left: 0; 
+            width: 100vw; 
+            height: 100vh;
+            background: linear-gradient(135deg, #a7f3d0, #34d399);
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .cover-title-box {
+            background: white;
+            padding: clamp(20px, 5vh, 40px) clamp(30px, 5vw, 60px);
+            border-radius: 30px;
+            border: 8px solid #3b82f6;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: floatPulse 2s ease-in-out infinite;
+        }
+
+        .cover-title-box h1 {
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            color: #1e40af;
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+
+        .click-prompt {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            color: #047857;
+            font-weight: bold;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes floatPulse {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.02); }
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        /* END COVER SCREEN */
+
+        #app-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 1vh 2vw;
+            position: relative;
+        }
+
+        /* HEADER & STICKERS */
+        .header {
+            flex: 0 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1vh;
+            padding: 5px;
+        }
+        .header h1 {
+            font-size: clamp(1.2rem, 3vh, 1.8rem);
+            color: #047857;
+        }
+        .stickers {
+            font-size: clamp(1.5rem, 4vh, 2rem);
+            min-width: 150px;
+            text-align: right;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 5px 10px;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        /* INSTRUCTION ZONE */
+        .instruction-box {
+            flex: 0 0 auto;
+            background-color: #fff;
+            border: 3px solid #6ee7b7;
+            border-radius: 12px;
+            padding: 1vh 2vw;
+            text-align: center;
+            font-size: clamp(1rem, 2.5vh, 1.4rem);
+            font-weight: bold;
+            color: #1e40af;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 1vh;
+            min-height: 3.5em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        /* MANIPULATIVES (10-FRAMES) */
+        .manipulatives-zone {
+            flex: 1 1 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            min-height: 0; 
+        }
+        .frame-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .frame-label {
+            font-size: clamp(0.9rem, 2vh, 1.2rem);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .ten-frame {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 4px;
+            background: #fff;
+            border: 3px solid #4b5563;
+            padding: 4px;
+            border-radius: 8px;
+            width: clamp(140px, 25vw, 220px);
+            aspect-ratio: 5/2;
+        }
+        .cube {
+            border-radius: 4px;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .cube.blue { background-color: #3b82f6; }
+        .cube.orange { background-color: #f97316; }
+        .cube.empty { background-color: transparent; border: 1px dashed #cbd5e1; box-shadow: none; }
+        
+        .cube.removed {
+            opacity: 0.3;
+            transform: scale(0.8);
+        }
+        .cube.removed::after {
+            content: '❌';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(10px, 1.5vw, 16px);
+        }
+
+        /* WORKSPACE: NUMBER BOND & EQUATIONS */
+        .workspace {
+            flex: 2 1 auto;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            padding: 10px;
+            margin-bottom: 1vh;
+            min-height: 0;
+        }
+
+        /* Number Bond Styles */
+        .number-bond {
+            position: relative;
+            width: clamp(150px, 30vw, 250px);
+            height: clamp(150px, 30vw, 250px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .bond-svg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+        .bond-circle {
+            z-index: 2;
+            width: clamp(3rem, 7vh, 4rem);
+            height: clamp(3rem, 7vh, 4rem);
+            border-radius: 50%;
+            border: 3px solid #3b82f6;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: clamp(1.2rem, 3vh, 1.8rem);
+            font-weight: bold;
+        }
+        .bond-top { margin-top: 5%; }
+        .bond-bottom-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 10%;
+            margin-bottom: 5%;
+        }
+        
+        .highlight {
+            box-shadow: 0 0 0 5px #fde047;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Equations Zone */
+        .equations {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(10px, 2vh, 20px);
+            font-size: clamp(1.2rem, 3vh, 1.8rem);
+            font-weight: bold;
+        }
+        .eq-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0.3; 
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .eq-row.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .eq-row.completed {
+            opacity: 1;
+        }
+        
+        /* Inputs */
+        input[type="number"] {
+            width: 2.8em; 
+            height: 2em;
+            text-align: center;
+            font-size: clamp(1.2rem, 3vh, 1.5rem);
+            font-family: inherit;
+            border: 3px solid #ccc;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+            -moz-appearance: textfield; 
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input:focus { border-color: #3b82f6; }
+        
+        .wrong {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+            color: #dc2626 !important;
+        }
+        .correct-text { color: #16a34a; }
+
+        /* CONTROLS */
+        .controls {
+            flex: 0 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 1vh;
+        }
+        button {
+            padding: clamp(10px, 2vh, 15px) clamp(20px, 4vw, 30px);
+            font-size: clamp(1rem, 2.5vh, 1.5rem);
+            font-weight: bold;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            color: white;
+            transition: transform 0.1s, background 0.3s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        button:active { transform: translateY(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .btn-check { background-color: #3b82f6; }
+        .btn-check:hover { background-color: #2563eb; }
+        .btn-next { background-color: #10b981; }
+        .btn-next:hover { background-color: #059669; }
+
+        /* Reward Modal */
+        #reward-modal {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.98);
+            border: 6px solid #fcd34d;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            z-index: 200;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        .reward-title { font-size: 2rem; color: #047857; margin-bottom: 10px; }
+        .huge-sticker { font-size: 6rem; animation: bounceSticker 1s ease-in-out infinite; }
+        
+        @keyframes bounceSticker {
+            0%, 100% { transform: translateY(0) scale(1) rotate(-5deg); }
+            50% { transform: translateY(-20px) scale(1.1) rotate(5deg); }
+        }
+
+        /* End Screen */
+        #end-screen {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(255,255,255,0.95);
+            z-index: 100;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        #end-screen h2 { font-size: 3rem; color: #047857; margin-bottom: 20px; }
+        #end-screen .big-stickers { font-size: 4rem; letter-spacing: 10px; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+    <div id="cover-screen" onclick="startApp()">
+        <div class="cover-title-box">
+            <h1>Subtract from<br>ones first</h1>
+            <div class="click-prompt">(Click anywhere to start!)</div>
+        </div>
+    </div>
+
+    <div id="app-container">
+        <div class="header">
+            <h1>Subtracting within 20</h1>
+            <div class="stickers" id="sticker-board"></div>
+        </div>
+
+        <div class="instruction-box" id="instruction-text">
+            Loading...
+        </div>
+
+        <div class="manipulatives-zone">
+            <div class="frame-wrapper">
+                <div class="frame-label" id="label-tens">10</div>
+                <div class="ten-frame" id="frame-left">
+                    </div>
+            </div>
+            <div class="frame-wrapper">
+                <div class="frame-label" id="label-ones">Ones</div>
+                <div class="ten-frame" id="frame-right">
+                    </div>
+            </div>
+        </div>
+
+        <div class="workspace">
+            <div class="number-bond">
+                <svg class="bond-svg">
+                    <line x1="50%" y1="15%" x2="25%" y2="85%" stroke="#9ca3af" stroke-width="4" />
+                    <line x1="50%" y1="15%" x2="75%" y2="85%" stroke="#9ca3af" stroke-width="4" />
+                </svg>
+                <div class="bond-circle bond-top" id="bond-total">17</div>
+                <div class="bond-bottom-row">
+                    <input type="number" class="bond-circle" id="bond-part1" placeholder="?" aria-label="First part of number bond">
+                    <input type="number" class="bond-circle" id="bond-part2" placeholder="?" aria-label="Second part of number bond">
+                </div>
+            </div>
+
+            <div class="equations">
+                <div class="eq-row active" id="main-eq">
+                    <span id="eq-total">17</span> - <span id="eq-sub">5</span> = ?
+                </div>
+                <div class="eq-row" id="step2-eq">
+                    <span id="eq-ones">7</span> - <span id="eq-sub2">5</span> = 
+                    <input type="number" id="input-step2" placeholder="?">
+                </div>
+                <div class="eq-row" id="step3-eq">
+                    10 + <span id="eq-rem">2</span> = 
+                    <input type="number" id="input-step3" placeholder="?">
+                </div>
+                </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-check" id="btn-check" onclick="handleCheck()">Check Answer</button>
+        </div>
+
+        <div id="reward-modal">
+            <h2 class="reward-title">Awesome!<br>You have gotten a sticker!!</h2>
+            <div id="reward-sticker-display" class="huge-sticker"></div>
+            <button class="btn-next" onclick="handleNext()">Next Question ➡️</button>
+        </div>
+    </div>
+
+    <div id="end-screen">
+        <h2>Great Job!</h2>
+        <p style="font-size: 1.5rem; color: #555; margin-bottom: 20px;">You've completed all the questions.</p>
+        <div class="big-stickers" id="end-stickers"></div>
+        <button class="btn-check" onclick="resetGame()">Play Again 🔄</button>
+    </div>
+
+    <script>
+        // Game State and Configuration
+        const MAX_QUESTIONS = 5;
+        // Allowed cute stickers (No pigs, no offensive items)
+        const AVAILABLE_STICKERS = ['🌟', '🦕', '🍎', '🧸', '🚀', '🐶', '🐼', '🌻', '🎈', '🐯'];
+        
+        let questions = [];
+        let currentQIndex = 0;
+        let currentStep = 1; 
+        let earnedStickers = [];
+
+        // DOM Elements
+        const elInstruction = document.getElementById('instruction-text');
+        const elStickers = document.getElementById('sticker-board');
+        const elFrameLeft = document.getElementById('frame-left');
+        const elFrameRight = document.getElementById('frame-right');
+        const coverScreen = document.getElementById('cover-screen');
+        
+        // Number bond elements
+        const bondTotal = document.getElementById('bond-total');
+        const bondPart1 = document.getElementById('bond-part1');
+        const bondPart2 = document.getElementById('bond-part2');
+        
+        // Equation elements
+        const eqTotal = document.getElementById('eq-total');
+        const eqSub = document.getElementById('eq-sub');
+        const eqOnes = document.getElementById('eq-ones');
+        const eqSub2 = document.getElementById('eq-sub2');
+        const eqRem = document.getElementById('eq-rem');
+        
+        const rowMain = document.getElementById('main-eq');
+        const rowStep2 = document.getElementById('step2-eq');
+        const rowStep3 = document.getElementById('step3-eq');
+        
+        const inputStep2 = document.getElementById('input-step2');
+        const inputStep3 = document.getElementById('input-step3');
+        
+        const btnCheck = document.getElementById('btn-check');
+        const rewardModal = document.getElementById('reward-modal');
+        const rewardStickerDisplay = document.getElementById('reward-sticker-display');
+        const endScreen = document.getElementById('end-screen');
+
+        // Start App function (Hides cover screen)
+        function startApp() {
+            coverScreen.style.display = 'none';
+            // Start the actual game flow here so it initializes smoothly once they click
+            initGame(); 
+        }
+
+        // Function to clear red warnings when student types
+        function clearErrorClass(event) {
+            event.target.classList.remove('wrong');
+        }
+
+        // Attach event listeners to all inputs to remove 'wrong' class dynamically
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', clearErrorClass);
+            input.addEventListener('focus', clearErrorClass);
+        });
+
+        // Generate Math Questions Logic
+        function generateQuestions() {
+            questions = [];
+            const usedCombinations = new Set();
+            
+            while (questions.length < MAX_QUESTIONS) {
+                // Total between 11 and 19
+                const ones = Math.floor(Math.random() * 9) + 1; // 1 to 9
+                const total = 10 + ones;
+                // Subtrahend between 1 and ones (so no regrouping needed)
+                const sub = Math.floor(Math.random() * ones) + 1; 
+                
+                const comboId = `${total}-${sub}`;
+                
+                if (!usedCombinations.has(comboId)) {
+                    usedCombinations.add(comboId);
+                    questions.push({
+                        total: total,
+                        ones: ones,
+                        sub: sub,
+                        remainder: ones - sub,
+                        answer: total - sub
+                    });
+                }
+            }
+        }
+
+        // Render 10-frames manipulatives
+        function renderFrames(q) {
+            elFrameLeft.innerHTML = '';
+            elFrameRight.innerHTML = '';
+            
+            // Left Frame (Always 10 Blue)
+            for(let i=0; i<10; i++) {
+                const cube = document.createElement('div');
+                cube.className = 'cube blue';
+                elFrameLeft.appendChild(cube);
+            }
+            
+            // Right Frame (Ones, Orange)
+            for(let i=0; i<10; i++) {
+                const cube = document.createElement('div');
+                if (i < q.ones) {
+                    cube.className = 'cube orange';
+                    cube.id = `orange-cube-${i}`;
+                } else {
+                    cube.className = 'cube empty';
+                }
+                elFrameRight.appendChild(cube);
+            }
+        }
+
+        function loadQuestion() {
+            const q = questions[currentQIndex];
+            currentStep = 1;
+            
+            // Reset UI
+            rewardModal.style.display = 'none';
+            btnCheck.style.display = 'inline-block';
+            
+            bondTotal.textContent = q.total;
+            bondPart1.value = ''; bondPart1.disabled = false; bondPart1.classList.remove('wrong');
+            bondPart2.value = ''; bondPart2.disabled = false; bondPart2.classList.remove('wrong');
+            bondPart2.classList.remove('highlight');
+            
+            eqTotal.textContent = q.total;
+            eqSub.textContent = q.sub;
+            eqOnes.textContent = q.ones;
+            eqSub2.textContent = q.sub;
+            eqRem.textContent = q.remainder;
+            
+            inputStep2.value = ''; inputStep2.disabled = false; inputStep2.classList.remove('wrong');
+            inputStep3.value = ''; inputStep3.disabled = false; inputStep3.classList.remove('wrong');
+            
+            rowStep2.classList.remove('active', 'completed');
+            rowStep3.classList.remove('active', 'completed');
+            eqSub2.classList.remove('highlight');
+            bondPart1.classList.remove('highlight');
+
+            renderFrames(q);
+            updateInstructions(q);
+        }
+
+        function updateInstructions(q) {
+            if (currentStep === 1) {
+                elInstruction.textContent = `Step 1: Split ${q.total} into 10 and ${q.ones}.`;
+                bondPart1.focus();
+            } else if (currentStep === 2) {
+                elInstruction.innerHTML = `Step 2: Subtract from the ones.<br>${q.ones} - ${q.sub}`;
+                rowStep2.classList.add('active');
+                
+                // Visual Highlight
+                bondPart2.classList.add('highlight'); 
+                eqSub2.classList.add('highlight');
+                
+                inputStep2.focus();
+            } else if (currentStep === 3) {
+                elInstruction.textContent = `Step 3: Add 10 and ${q.remainder} to complete the equation!`;
+                rowStep2.classList.replace('active', 'completed');
+                rowStep3.classList.add('active');
+                
+                // Remove step 2 highlights, highlight 10 circle for step 3
+                bondPart2.classList.remove('highlight');
+                eqSub2.classList.remove('highlight');
+                bondPart1.classList.add('highlight');
+                
+                inputStep3.focus();
+            }
+        }
+
+        function handleCheck() {
+            const q = questions[currentQIndex];
+            
+            if (currentStep === 1) {
+                const val1 = parseInt(bondPart1.value);
+                const val2 = parseInt(bondPart2.value);
+                
+                if ((val1 === 10 && val2 === q.ones) || (val1 === q.ones && val2 === 10)) {
+                    bondPart1.value = 10;
+                    bondPart2.value = q.ones;
+                    bondPart1.disabled = true;
+                    bondPart2.disabled = true;
+                    
+                    currentStep = 2;
+                    updateInstructions(q);
+                } else {
+                    if (val1 !== 10 && val1 !== q.ones) bondPart1.classList.add('wrong');
+                    if (val2 !== 10 && val2 !== q.ones) bondPart2.classList.add('wrong');
+                }
+                
+            } else if (currentStep === 2) {
+                const ans = parseInt(inputStep2.value);
+                if (ans === q.remainder) {
+                    inputStep2.disabled = true;
+                    
+                    for(let i = 0; i < q.sub; i++) {
+                        const idxToRemove = q.ones - 1 - i;
+                        const cubeToRemove = document.getElementById(`orange-cube-${idxToRemove}`);
+                        if(cubeToRemove) {
+                            cubeToRemove.classList.add('removed');
+                        }
+                    }
+
+                    currentStep = 3;
+                    updateInstructions(q);
+                } else {
+                    inputStep2.classList.add('wrong');
+                }
+                
+            } else if (currentStep === 3) {
+                const ans3 = parseInt(inputStep3.value);
+                
+                if (ans3 === q.answer) {
+                    inputStep3.disabled = true;
+                    bondPart1.classList.remove('highlight');
+                    
+                    elInstruction.innerHTML = `Great Job! ${q.total} - ${q.sub} = <span class="correct-text">${q.answer}</span>`;
+                    btnCheck.style.display = 'none'; 
+                    
+                    // Award Big Sticker
+                    const randomSticker = AVAILABLE_STICKERS[Math.floor(Math.random() * AVAILABLE_STICKERS.length)];
+                    earnedStickers.push(randomSticker);
+                    updateStickerBoard();
+                    
+                    // Show Exciting Pop-up
+                    rewardStickerDisplay.textContent = randomSticker;
+                    rewardModal.style.display = 'flex';
+                    
+                } else {
+                    inputStep3.classList.add('wrong');
+                }
+            }
+        }
+
+        function handleNext() {
+            currentQIndex++;
+            if (currentQIndex < MAX_QUESTIONS) {
+                loadQuestion();
+            } else {
+                rewardModal.style.display = 'none';
+                document.getElementById('end-stickers').textContent = earnedStickers.join(' ');
+                endScreen.style.display = 'flex';
+            }
+        }
+
+        function updateStickerBoard() {
+            elStickers.textContent = earnedStickers.join(' ');
+        }
+
+        function initGame() {
+            endScreen.style.display = 'none';
+            earnedStickers = [];
+            currentQIndex = 0;
+            updateStickerBoard();
+            generateQuestions();
+            loadQuestion();
+        }
+
+        // Allow play again from end screen
+        function resetGame() {
+            coverScreen.style.display = 'flex';
+            endScreen.style.display = 'none';
+        }
+
+        // Allow 'Enter' key to trigger check
+        document.addEventListener('keypress', function(e) {
+            // Check if cover screen is visible. If so, enter starts the app.
+            if (coverScreen.style.display !== 'none' && e.key === 'Enter') {
+                startApp();
+                return;
+            }
+
+            if (e.key === 'Enter') {
+                if (rewardModal.style.display === 'flex') {
+                    handleNext();
+                } else if (btnCheck.style.display !== 'none') {
+                    handleCheck();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
