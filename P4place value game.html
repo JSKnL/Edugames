@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Correct Place Value Game</title>
+<style>
+  body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #e3f2fd, #fce4ec);
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+
+  .page {
+    display: none;
+    padding: 20px;
+  }
+
+  .active {
+    display: block;
+  }
+
+  h1 {
+    font-size: 2.5em;
+    color: #1565c0;
+  }
+
+  h2 {
+    color: #6a1b9a;
+  }
+
+  button {
+    background-color: #42a5f5;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1.1em;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background-color: #1e88e5;
+  }
+
+  #questionContainer {
+    font-size: 1.4em;
+    margin: 20px 0;
+  }
+
+  #scoreboard {
+    position: fixed;
+    right: 20px;
+    top: 20px;
+    background: white;
+    border: 2px solid #90caf9;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  }
+
+  input {
+    padding: 8px;
+    font-size: 1em;
+    width: 80px;
+    text-align: center;
+  }
+
+  .feedback {
+    font-size: 1.2em;
+    margin-top: 10px;
+  }
+
+  .star {
+    width: 80px;
+    animation: sparkle 1s ease-in-out infinite alternate;
+  }
+
+  @keyframes sparkle {
+    from { transform: scale(1); opacity: 0.8; }
+    to { transform: scale(1.2); opacity: 1; }
+  }
+
+  .final-score {
+    font-size: 2em;
+    color: #2e7d32;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Front Page -->
+<div id="frontPage" class="page active">
+  <h1>The Correct Place Value Game</h1>
+  <button onclick="showPage('instructionsPage')">Start</button>
+</div>
+
+<!-- Instructions Page -->
+<div id="instructionsPage" class="page">
+  <h2>Instructions</h2>
+  <p>Welcome to <b>The Correct Place Value Game!</b></p>
+  <p>You will be shown a 5-digit number and asked which digit is in a specific place value.</p>
+  <ul style="text-align:left; display:inline-block;">
+    <li>There are 20 questions in total.</li>
+    <li>Each correct answer gives you <b>+2 points</b>.</li>
+    <li>Each incorrect answer deducts <b>1 point</b>.</li>
+    <li>Numbers will not repeat.</li>
+  </ul>
+  <button onclick="startGame()">Begin Game</button>
+</div>
+
+<!-- Game Page -->
+<div id="gamePage" class="page">
+  <div id="scoreboard">Score: 0</div>
+  <div id="questionContainer"></div>
+  <input type="text" id="answerInput" maxlength="1" />
+  <button onclick="checkAnswer()">Submit</button>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<!-- Final Page -->
+<div id="finalPage" class="page">
+  <h2>Congratulations!</h2>
+  <img src="https://cdn-icons-png.flaticon.com/512/616/616490.png" class="star" alt="Star">
+  <div class="final-score" id="finalScore"></div>
+  <button onclick="location.reload()">Play Again</button>
+</div>
+
+<script>
+  const pages = {
+    frontPage: document.getElementById("frontPage"),
+    instructionsPage: document.getElementById("instructionsPage"),
+    gamePage: document.getElementById("gamePage"),
+    finalPage: document.getElementById("finalPage")
+  };
+
+  let score = 0;
+  let currentQuestion = 0;
+  let questions = [];
+
+  function showPage(id) {
+    for (let key in pages) pages[key].classList.remove("active");
+    pages[id].classList.add("active");
+  }
+
+  function startGame() {
+    generateQuestions();
+    currentQuestion = 0;
+    score = 0;
+    showPage("gamePage");
+    showQuestion();
+  }
+
+  function generateQuestions() {
+    const usedNumbers = new Set();
+    const questionTypes = [
+      {text: "ones", count: 3, place: 0},
+      {text: "tens", count: 4, place: 1},
+      {text: "hundreds", count: 5, place: 2},
+      {text: "thousands", count: 4, place: 3},
+      {text: "ten thousands", count: 4, place: 4}
+    ];
+
+    questions = [];
+
+    for (let type of questionTypes) {
+      for (let i = 0; i < type.count; i++) {
+        let num;
+        do {
+          num = Math.floor(Math.random() * (98760 - 12012 + 1)) + 12012;
+        } while (usedNumbers.has(num));
+        usedNumbers.add(num);
+        const digits = num.toString().padStart(5, "0").split("");
+        const correct = digits[4 - type.place];
+        questions.push({
+          question: `Which digit is in the ${type.text} place?<br><b>${num}</b>`,
+          answer: correct
+        });
+      }
+    }
+
+    // Shuffle questions
+    questions.sort(() => Math.random() - 0.5);
+  }
+
+  function showQuestion() {
+    if (currentQuestion >= questions.length) {
+      showFinalPage();
+      return;
+    }
+    document.getElementById("feedback").innerText = "";
+    document.getElementById("answerInput").value = "";
+    document.getElementById("questionContainer").innerHTML =
+      `<p>Question ${currentQuestion + 1} of ${questions.length}</p><p>${questions[currentQuestion].question}</p>`;
+    updateScore();
+  }
+
+  function checkAnswer() {
+    const userAnswer = document.getElementById("answerInput").value.trim();
+    const feedback = document.getElementById("feedback");
+    const correctAnswer = questions[currentQuestion].answer;
+
+    if (userAnswer === correctAnswer) {
+      feedback.innerHTML = `<span style="color:green;">⭐ Correct!</span>`;
+      score += 2;
+    } else {
+      feedback.innerHTML = `<span style="color:red;">Try Again.</span>`;
+      score -= 1;
+    }
+
+    updateScore();
+
+    // Proceed to next question after short delay
+    setTimeout(() => {
+      currentQuestion++;
+      showQuestion();
+    }, 1000);
+  }
+
+  function updateScore() {
+    document.getElementById("scoreboard").innerText = `Score: ${score}`;
+  }
+
+  function showFinalPage() {
+    showPage("finalPage");
+    document.getElementById("finalScore").innerText = `Your total score is ${score} points!`;
+  }
+</script>
+
+</body>
+</html>
