@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Place Value Stars Game</title>
+
+<style>
+    body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: linear-gradient(to bottom, #e3f2fd, #ffffff);
+        text-align: center;
+        margin: 0;
+        padding: 0;
+    }
+
+    .page {
+        display: none;
+        padding: 40px;
+    }
+
+    .active {
+        display: block;
+    }
+
+    h1 {
+        color: #1a237e;
+    }
+
+    button {
+        padding: 12px 26px;
+        font-size: 16px;
+        border: none;
+        border-radius: 10px;
+        background: #1976d2;
+        color: white;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+
+    button:hover {
+        background: #0d47a1;
+    }
+
+    .number-box {
+        font-size: 42px;
+        font-weight: bold;
+        color: #d32f2f;
+        margin: 20px 0;
+        letter-spacing: 4px;
+    }
+
+    input {
+        padding: 10px;
+        font-size: 18px;
+        width: 220px;
+        text-align: center;
+        border-radius: 8px;
+        border: 2px solid #90caf9;
+    }
+
+    /* SCOREBOARD */
+    .scoreboard {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        font-size: 18px;
+        margin-bottom: 20px;
+        font-weight: bold;
+    }
+
+    .feedback {
+        height: 60px;
+        margin-top: 15px;
+        font-size: 22px;
+    }
+
+    /* ANIMATED STAR */
+    .star {
+        font-size: 45px;
+        color: gold;
+        animation: pop 0.6s ease-out;
+    }
+
+    @keyframes pop {
+        0% { transform: scale(0); opacity: 0; }
+        60% { transform: scale(1.4); opacity: 1; }
+        100% { transform: scale(1); }
+    }
+
+    .wrong {
+        color: #c62828;
+        font-weight: bold;
+    }
+</style>
+</head>
+
+<body>
+
+<!-- COVER PAGE -->
+<div class="page active" id="coverPage">
+    <h1>⭐ Place Value Stars ⭐</h1>
+    <p><strong>Primary Mathematics</strong></p>
+    <p>Understand the value of digits in a 5-digit number</p>
+    <button onclick="showPage('instructionPage')">Start</button>
+</div>
+
+<!-- INSTRUCTION PAGE -->
+<div class="page" id="instructionPage">
+    <h1>Instructions</h1>
+    <p>You will see a <strong>5-digit number</strong>.</p>
+    <p>Answer the question:</p>
+    <p><strong>“What is the value of the digit ___?”</strong></p>
+    <p>✔ Correct answer: <strong>+10 marks</strong><br>
+       ❌ Wrong answer: <strong>−5 marks</strong></p>
+    <p>You may <strong>try again</strong> if your answer is wrong.</p>
+    <p>Total questions: <strong>12</strong></p>
+    <button onclick="startGame()">Play Game</button>
+</div>
+
+<!-- GAME PAGE -->
+<div class="page" id="gamePage">
+
+    <div class="scoreboard">
+        <div>Question: <span id="qNum">1</span> / 12</div>
+        <div>Score: <span id="score">0</span></div>
+    </div>
+
+    <div class="number-box" id="numberDisplay"></div>
+
+    <p id="questionText"></p>
+
+    <input type="number" id="answerInput" placeholder="Enter the value">
+    <br>
+    <button onclick="checkAnswer()">Submit</button>
+
+    <div class="feedback" id="feedback"></div>
+</div>
+
+<!-- END PAGE -->
+<div class="page" id="endPage">
+    <h1>🎉 Well Done! 🎉</h1>
+    <p>Your final score is:</p>
+    <h2 id="finalScore"></h2>
+    <button onclick="location.reload()">Play Again</button>
+</div>
+
+<script>
+let currentQuestion = 0;
+let score = 0;
+let questions = [];
+let correctValue = 0;
+
+/* PAGE CONTROL */
+function showPage(pageId) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(pageId).classList.add('active');
+}
+
+/* START GAME */
+function startGame() {
+    generateQuestions();
+    currentQuestion = 0;
+    score = 0;
+    document.getElementById('score').textContent = score;
+    showPage('gamePage');
+    loadQuestion();
+}
+
+/* GENERATE 5-DIGIT NUMBER WITH NO REPEATED DIGITS */
+function generateUnique5DigitNumber() {
+    let digits = [];
+    while (digits.length < 5) {
+        let d = Math.floor(Math.random() * 10);
+        if (digits.length === 0 && d === 0) continue; // no leading zero
+        if (!digits.includes(d)) {
+            digits.push(d);
+        }
+    }
+    return digits.join('');
+}
+
+/* CREATE QUESTIONS */
+function generateQuestions() {
+    questions = [];
+    for (let i = 0; i < 12; i++) {
+        let number = generateUnique5DigitNumber();
+        let digits = number.split('');
+        let index = Math.floor(Math.random() * 5);
+        let digit = digits[index];
+        let placeValue = Math.pow(10, 4 - index);
+        let value = digit * placeValue;
+
+        questions.push({ number, digit, value });
+    }
+}
+
+/* LOAD QUESTION */
+function loadQuestion() {
+    let q = questions[currentQuestion];
+    document.getElementById('qNum').textContent = currentQuestion + 1;
+    document.getElementById('numberDisplay').textContent = q.number;
+    document.getElementById('questionText').textContent =
+        `What is the value of the digit ${q.digit}?`;
+
+    correctValue = q.value;
+    document.getElementById('answerInput').value = "";
+    document.getElementById('feedback').innerHTML = "";
+}
+
+/* CHECK ANSWER */
+function checkAnswer() {
+    let userAnswer = Number(document.getElementById('answerInput').value);
+    let feedback = document.getElementById('feedback');
+
+    if (userAnswer === correctValue) {
+        score += 10;
+        feedback.innerHTML = `<span class="star">⭐</span> Correct!`;
+        document.getElementById('score').textContent = score;
+
+        setTimeout(() => {
+            currentQuestion++;
+            if (currentQuestion < 12) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }, 1200);
+
+    } else {
+        score -= 5;
+        feedback.innerHTML = `<span class="wrong">❌ Try Again</span>`;
+        document.getElementById('score').textContent = score;
+        // SAME QUESTION remains
+    }
+}
+
+/* END GAME */
+function endGame() {
+    document.getElementById('finalScore').textContent = score;
+    showPage('endPage');
+}
+</script>
+
+</body>
+</html>
