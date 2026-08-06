@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spot the Lines: Archery Challenge</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .game-container {
+            width: 980px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+            min-height: 640px;
+            overflow: hidden;
+        }
+
+        /* Overlay Screens */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            border-radius: 16px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .overlay-screen h1 {
+            font-size: 42px;
+            color: #2c3e50;
+            margin-bottom: 16px;
+        }
+
+        .overlay-screen h2 {
+            font-size: 34px;
+            color: #27ae60;
+            margin-bottom: 20px;
+        }
+
+        .instructions-card {
+            background: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 680px;
+            margin-bottom: 24px;
+            text-align: left;
+            line-height: 1.6;
+            color: #34495e;
+            font-size: 17px;
+        }
+
+        .instructions-card ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background-color: #27ae60;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 12px 36px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s, background-color 0.2s;
+            will-change: transform;
+        }
+
+        .btn-primary:hover {
+            background-color: #219150;
+            transform: scale(1.05);
+        }
+
+        /* Header & Status Bar */
+        header {
+            text-align: center;
+        }
+
+        h3 {
+            color: #2c3e50;
+            font-size: 24px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #ecf0f1;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .main-stage {
+            display: flex;
+            gap: 20px;
+            height: 430px;
+        }
+
+        .canvas-area {
+            flex: 1;
+            background: #ffffff;
+            border: 2px solid #bdc3c7;
+            border-radius: 12px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Archery Alley */
+        .archery-stage {
+            width: 350px;
+            background: #34495e;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            position: relative;
+        }
+
+        .archery-range {
+            position: relative;
+            width: 100%;
+            height: 290px;
+            background: radial-gradient(circle at bottom left, #2c3e50 0%, #1a252f 100%);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #4a6572;
+        }
+
+        /* Multi-Ring Dartboard (Top-Right Corner) */
+        .target-board {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(circle, 
+                #f1c40f 0%, #f1c40f 12%,   /* Gold Bullseye (10 pts) */
+                #e74c3c 12%, #e74c3c 32%,  /* Red Inner Ring (8 pts) */
+                #3498db 32%, #3498db 52%,  /* Blue Middle Ring (6 pts) */
+                #2c3e50 52%, #2c3e50 72%,  /* Black Outer Ring (4 pts) */
+                #ffffff 72%, #ffffff 92%,  /* White Border Ring (2 pts) */
+                #bdc3c7 92%, #bdc3c7 100%
+            );
+            border: 3px solid #f39c12;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+            pointer-events: none;
+        }
+
+        /* Bow and Arrow Assembly (Bottom-Left Corner) */
+        .bow-assembly {
+            position: absolute;
+            bottom: 25px;
+            left: 25px;
+            width: 80px;
+            height: 60px;
+            transform-origin: 20px 40px;
+            will-change: transform;
+        }
+
+        .bow {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 80px;
+            height: 40px;
+            border-top: 5px solid #8e44ad;
+            border-radius: 50px 50px 0 0;
+            pointer-events: none;
+        }
+
+        .bow-string {
+            position: absolute;
+            bottom: 0;
+            left: 2px;
+            width: 76px;
+            height: 1px;
+            border-bottom: 2px dashed #ecf0f1;
+            pointer-events: none;
+        }
+
+        .arrow {
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 95px;
+            background: #f1c40f;
+            border-radius: 3px;
+            z-index: 5;
+            will-change: transform;
+            pointer-events: none;
+        }
+
+        .arrow-head {
+            position: absolute;
+            top: -8px;
+            left: -5px;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid #e74c3c;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            align-items: center;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-size: 15px;
+            width: 90%;
+        }
+
+        .slider-group input {
+            flex: 1;
+        }
+
+        .btn-shoot {
+            background-color: #27ae60;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px 24px;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            width: 85%;
+            transition: background-color 0.2s;
+        }
+
+        .btn-shoot:disabled {
+            background-color: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        .btn-shoot:hover:not(:disabled) {
+            background-color: #219150;
+        }
+
+        .feedback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 16px 28px;
+            border-radius: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+            z-index: 10;
+        }
+
+        .instruction {
+            text-align: center;
+            font-size: 15px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <!-- Introduction Title Screen -->
+    <div class="overlay-screen" id="title-screen">
+        <h1>🏹 Spot the Lines: Archery Challenge</h1>
+        <div class="instructions-card">
+            <p><strong>Instructions:</strong></p>
+            <ul>
+                <li><strong>Round 1:</strong> Identify pairs of <strong>Parallel Lines</strong> (//).</li>
+                <li><strong>Round 2:</strong> Identify pairs of <strong>Perpendicular Lines</strong> (⊥).</li>
+                <li><strong>Round 3:</strong> Mixed Challenge (Parallel & Perpendicular).</li>
+                <li>Click 2 line segments on the grid that form the requested pair.</li>
+                <li>When correct, adjust your bow aim and shoot the 5-ring dartboard to earn maximum points!</li>
+            </ul>
+        </div>
+        <button class="btn-primary" onclick="showRoundIntro(1)">Start Game</button>
+    </div>
+
+    <!-- Pre-Round Screen -->
+    <div class="overlay-screen" id="round-intro-screen" style="display: none;">
+        <h2 id="round-intro-title">Round 1</h2>
+        <div class="instructions-card" id="round-intro-desc" style="text-align: center;"></div>
+        <button class="btn-primary" onclick="startRound()">Let's Go!</button>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div class="overlay-screen" id="gameover-screen" style="display: none;">
+        <h1>🎉 Game Complete!</h1>
+        <div class="instructions-card" style="text-align: center;">
+            <p style="font-size: 24px; margin-bottom: 10px;">Total Archery Points:</p>
+            <p id="final-score" style="font-size: 52px; color: #27ae60; font-weight: bold;">0 Points</p>
+        </div>
+        <button class="btn-primary" onclick="location.reload()">Play Again</button>
+    </div>
+
+    <!-- Main Header -->
+    <header>
+        <h3>🏹 Spot the Lines: Archery Challenge</h3>
+    </header>
+
+    <div class="status-bar">
+        <span id="target-desc">Target: Find Parallel Lines</span>
+        <span id="progress-desc">Question: 1 / 5</span>
+        <span id="score-desc">Total Points: 0</span>
+    </div>
+
+    <div class="main-stage">
+        <!-- Interactive Canvas Grid -->
+        <div class="canvas-area" id="canvas-wrapper">
+            <canvas id="linesCanvas"></canvas>
+            <div id="feedback" class="feedback"></div>
+        </div>
+
+        <!-- Archery Alley -->
+        <div class="archery-stage">
+            <div class="archery-range">
+                <!-- Multi-Ring Target (Top Right) -->
+                <div class="target-board"></div>
+                <!-- Bow Assembly (Bottom Left) -->
+                <div class="bow-assembly" id="bow-assembly">
+                    <div class="bow"></div>
+                    <div class="bow-string"></div>
+                    <div class="arrow" id="arrow">
+                        <div class="arrow-head"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="slider-group">
+                    <label for="angle-slider">Aim:</label>
+                    <input type="range" id="angle-slider" min="20" max="75" value="48" disabled oninput="onSliderInput(this.value)">
+                </div>
+                <button class="btn-shoot" id="shoot-btn" disabled onclick="shootArrow()">SHOOT ARROW</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="instruction">
+        Select two correct lines on the grid shape. If correct, take aim and shoot your arrow!
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('linesCanvas');
+    const ctx = canvas.getContext('2d');
+    const feedback = document.getElementById('feedback');
+    const bowAssembly = document.getElementById('bow-assembly');
+    const arrow = document.getElementById('arrow');
+    const angleSlider = document.getElementById('angle-slider');
+    const shootBtn = document.getElementById('shoot-btn');
+
+    let currentRound = 1;
+    let questionIndex = 0;
+    let totalScore = 0;
+    let attemptsLeft = 2;
+    let selectedSegments = [];
+    let targetType = 'parallel';
+    let currentAimAngle = 48;
+    let isAnimatingArrow = false;
+    let animFrameId = null;
+
+    let currentShapeData = null;
+
+    // Library of distinct grid shapes for questions
+    const shapeTemplates = [
+        // Shape 1: Figure ABCDEFGH
+        {
+            points: { A:{c:1,r:1}, B:{c:7,r:1}, C:{c:7,r:7}, D:{c:1,r:7}, E:{c:1,r:5}, F:{c:4,r:5}, G:{c:4,r:3}, H:{c:1,r:3} },
+            segments: [
+                { name:"AB", p1:"A", p2:"B", dir:"H" }, { name:"BC", p1:"B", p2:"C", dir:"V" },
+                { name:"CD", p1:"C", p2:"D", dir:"H" }, { name:"DE", p1:"D", p2:"E", dir:"V" },
+                { name:"EF", p1:"E", p2:"F", dir:"H" }, { name:"FG", p1:"F", p2:"G", dir:"V" },
+                { name:"GH", p1:"G", p2:"H", dir:"H" }, { name:"HA", p1:"H", p2:"A", dir:"V" }
+            ]
+        },
+        // Shape 2: T-Shape
+        {
+            points: { A:{c:1,r:1}, B:{c:7,r:1}, C:{c:7,r:3}, D:{c:5,r:3}, E:{c:5,r:7}, F:{c:3,r:7}, G:{c:3,r:3}, H:{c:1,r:3} },
+            segments: [
+                { name:"AB", p1:"A", p2:"B", dir:"H" }, { name:"BC", p1:"B", p2:"C", dir:"V" },
+                { name:"CD", p1:"C", p2:"D", dir:"H" }, { name:"DE", p1:"D", p2:"E", dir:"V" },
+                { name:"EF", p1:"E", p2:"F", dir:"H" }, { name:"FG", p1:"F", p2:"G", dir:"V" },
+                { name:"GH", p1:"G", p2:"H", dir:"H" }, { name:"HA", p1:"H", p2:"A", dir:"V" }
+            ]
+        },
+        // Shape 3: Steps Shape
+        {
+            points: { A:{c:1,r:1}, B:{c:3,r:1}, C:{c:3,r:3}, D:{c:5,r:3}, E:{c:5,r:5}, F:{c:7,r:5}, G:{c:7,r:7}, H:{c:1,r:7} },
+            segments: [
+                { name:"AB", p1:"A", p2:"B", dir:"H" }, { name:"BC", p1:"B", p2:"C", dir:"V" },
+                { name:"CD", p1:"C", p2:"D", dir:"H" }, { name:"DE", p1:"D", p2:"E", dir:"V" },
+                { name:"EF", p1:"E", p2:"F", dir:"H" }, { name:"FG", p1:"F", p2:"G", dir:"V" },
+                { name:"GH", p1:"G", p2:"H", dir:"V" }, { name:"HA", p1:"H", p2:"A", dir:"V" }
+            ]
+        },
+        // Shape 4: Cross / Plus Structure
+        {
+            points: { A:{c:3,r:1}, B:{c:5,r:1}, C:{c:5,r:3}, D:{c:7,r:3}, E:{c:7,r:5}, F:{c:5,r:5}, G:{c:5,r:7}, H:{c:3,r:7}, I:{c:3,r:5}, J:{c:1,r:5}, K:{c:1,r:3}, L:{c:3,r:3} },
+            segments: [
+                { name:"AB", p1:"A", p2:"B", dir:"H" }, { name:"BC", p1:"B", p2:"C", dir:"V" },
+                { name:"CD", p1:"C", p2:"D", dir:"H" }, { name:"DE", p1:"D", p2:"E", dir:"V" },
+                { name:"EF", p1:"E", p2:"F", dir:"H" }, { name:"FG", p1:"F", p2:"G", dir:"V" },
+                { name:"GH", p1:"G", p2:"H", dir:"H" }, { name:"HI", p1:"H", p2:"I", dir:"V" },
+                { name:"IJ", p1:"I", p2:"J", dir:"H" }, { name:"JK", p1:"J", p2:"K", dir:"V" },
+                { name:"KL", p1:"K", p2:"L", dir:"H" }, { name:"LA", p1:"L", p2:"A", dir:"V" }
+            ]
+        },
+        // Shape 5: L-Shape
+        {
+            points: { A:{c:1,r:1}, B:{c:3,r:1}, C:{c:3,r:5}, D:{c:7,r:5}, E:{c:7,r:7}, F:{c:1,r:7} },
+            segments: [
+                { name:"AB", p1:"A", p2:"B", dir:"H" }, { name:"BC", p1:"B", p2:"C", dir:"V" },
+                { name:"CD", p1:"C", p2:"D", dir:"H" }, { name:"DE", p1:"D", p2:"E", dir:"V" },
+                { name:"EF", p1:"E", p2:"F", dir:"H" }, { name:"FA", p1:"F", p2:"A", dir:"V" }
+            ]
+        }
+    ];
+
+    // Offscreen Canvas Cache for Grid
+    let gridCanvas = document.createElement('canvas');
+    let gridCtx = gridCanvas.getContext('2d');
+
+    function resizeCanvas() {
+        const wrapper = document.getElementById('canvas-wrapper');
+        const width = wrapper.clientWidth;
+        const height = wrapper.clientHeight;
+
+        canvas.width = width;
+        canvas.height = height;
+        gridCanvas.width = width;
+        gridCanvas.height = height;
+
+        renderGridCache(width, height);
+        drawScene();
+    }
+
+    function renderGridCache(w, h) {
+        gridCtx.clearRect(0, 0, w, h);
+        const cols = 8, rows = 8;
+        const cellW = w / cols;
+        const cellH = h / rows;
+
+        gridCtx.strokeStyle = '#e0e0e0';
+        gridCtx.lineWidth = 1.5;
+
+        for (let i = 0; i <= cols; i++) {
+            gridCtx.beginPath();
+            gridCtx.moveTo(i * cellW, 0);
+            gridCtx.lineTo(i * cellW, h);
+            gridCtx.stroke();
+        }
+        for (let j = 0; j <= rows; j++) {
+            gridCtx.beginPath();
+            gridCtx.moveTo(0, j * cellH);
+            gridCtx.lineTo(w, j * cellH);
+            gridCtx.stroke();
+        }
+    }
+
+    function showRoundIntro(roundNum) {
+        currentRound = roundNum;
+        questionIndex = 0;
+        document.getElementById('title-screen').style.display = 'none';
+        document.getElementById('round-intro-screen').style.display = 'flex';
+
+        const titleElem = document.getElementById('round-intro-title');
+        const descElem = document.getElementById('round-intro-desc');
+
+        if (roundNum === 1) {
+            titleElem.innerText = "Round 1: Parallel Lines (//)";
+            descElem.innerHTML = "Identify pairs of lines that run in the same direction and <strong>never intersect</strong>!";
+        } else if (roundNum === 2) {
+            titleElem.innerText = "Round 2: Perpendicular Lines (⊥)";
+            descElem.innerHTML = "Identify pairs of lines that meet to form a <strong>90° right angle</strong>!";
+        } else {
+            titleElem.innerText = "Round 3: Mixed Archery Challenge";
+            descElem.innerHTML = "Test your skills with a mix of both <strong>Parallel</strong> and <strong>Perpendicular</strong> line targets!";
+        }
+    }
+
+    function startRound() {
+        document.getElementById('round-intro-screen').style.display = 'none';
+        resizeCanvas();
+        nextQuestion();
+    }
+
+    function nextQuestion() {
+        selectedSegments = [];
+        attemptsLeft = 2;
+        disableArcheryControls();
+        resetArrowPosition();
+
+        if (currentRound === 1) {
+            targetType = 'parallel';
+        } else if (currentRound === 2) {
+            targetType = 'perpendicular';
+        } else {
+            targetType = Math.random() < 0.5 ? 'parallel' : 'perpendicular';
+        }
+
+        document.getElementById('target-desc').innerText = `Target: Find ${targetType.toUpperCase()} Lines`;
+        document.getElementById('progress-desc').innerText = `Question: ${questionIndex + 1} / 5`;
+        document.getElementById('score-desc').innerText = `Total Points: ${totalScore}`;
+
+        // Select a shape template based on question index
+        currentShapeData = shapeTemplates[questionIndex % shapeTemplates.length];
+        drawScene();
+    }
+
+    function drawScene() {
+        if (!currentShapeData) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(gridCanvas, 0, 0);
+
+        const cellW = canvas.width / 8;
+        const cellH = canvas.height / 8;
+
+        // Draw shape segments
+        currentShapeData.segments.forEach(seg => {
+            const pt1 = currentShapeData.points[seg.p1];
+            const pt2 = currentShapeData.points[seg.p2];
+            const isSelected = selectedSegments.includes(seg);
+
+            ctx.beginPath();
+            ctx.moveTo(pt1.c * cellW, pt1.r * cellH);
+            ctx.lineTo(pt2.c * cellW, pt2.r * cellH);
+            ctx.lineWidth = isSelected ? 8 : 5;
+            ctx.strokeStyle = isSelected ? '#e67e22' : '#2c3e50';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        });
+
+        // Draw point vertex labels (A, B, C...)
+        ctx.font = 'bold 18px Segoe UI';
+        ctx.fillStyle = '#2c3e50';
+
+        Object.keys(currentShapeData.points).forEach(key => {
+            const pt = currentShapeData.points[key];
+            ctx.fillText(key, pt.c * cellW - 6, pt.r * cellH - 8);
+        });
+    }
+
+    canvas.addEventListener('click', (e) => {
+        if (!shootBtn.disabled || isAnimatingArrow) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+        const cellW = canvas.width / 8;
+        const cellH = canvas.height / 8;
+
+        let clickedSeg = null;
+        let minDistance = 18;
+
+        currentShapeData.segments.forEach(seg => {
+            const x1 = currentShapeData.points[seg.p1].c * cellW;
+            const y1 = currentShapeData.points[seg.p1].r * cellH;
+            const x2 = currentShapeData.points[seg.p2].c * cellW;
+            const y2 = currentShapeData.points[seg.p2].r * cellH;
+
+            const dist = pointToSegmentDistance(clickX, clickY, x1, y1, x2, y2);
+            if (dist < minDistance) {
+                clickedSeg = seg;
+            }
+        });
+
+        if (clickedSeg) {
+            const idx = selectedSegments.indexOf(clickedSeg);
+            if (idx > -1) {
+                selectedSegments.splice(idx, 1);
+            } else if (selectedSegments.length < 2) {
+                selectedSegments.push(clickedSeg);
+            }
+
+            drawScene();
+
+            if (selectedSegments.length === 2) {
+                checkAnswer();
+            }
+        }
+    });
+
+    function checkAnswer() {
+        const [s1, s2] = selectedSegments;
+        let isCorrect = false;
+
+        if (targetType === 'parallel') {
+            // Parallel if both are Horizontal or both are Vertical
+            isCorrect = (s1.dir === s2.dir);
+        } else if (targetType === 'perpendicular') {
+            // Perpendicular if one is Horizontal and one is Vertical
+            isCorrect = (s1.dir !== s2.dir);
+        }
+
+        if (isCorrect) {
+            showFeedback(`Correct! ${s1.name} & ${s2.name} 🏹`, "#27ae60");
+            setTimeout(() => {
+                hideFeedback();
+                enableArcheryControls();
+            }, 1000);
+        } else {
+            attemptsLeft--;
+            if (attemptsLeft > 0) {
+                showFeedback("Try again! 🎯", "#e67e22");
+                selectedSegments = [];
+                setTimeout(() => {
+                    hideFeedback();
+                    drawScene();
+                }, 1000);
+            } else {
+                showFeedback("Incorrect Pair!", "#c0392b");
+                setTimeout(() => {
+                    hideFeedback();
+                    advanceQuestion();
+                }, 1200);
+            }
+        }
+    }
+
+    function enableArcheryControls() {
+        angleSlider.disabled = false;
+        shootBtn.disabled = false;
+        updateBowAngle(angleSlider.value);
+    }
+
+    function disableArcheryControls() {
+        angleSlider.disabled = true;
+        shootBtn.disabled = true;
+    }
+
+    function onSliderInput(val) {
+        currentAimAngle = parseFloat(val);
+        requestAnimationFrame(() => updateBowAngle(currentAimAngle));
+    }
+
+    function updateBowAngle(val) {
+        bowAssembly.style.transform = `rotate(${val}deg)`;
+    }
+
+    function resetArrowPosition() {
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+        isAnimatingArrow = false;
+        arrow.style.transform = `translateX(-50%) translateY(0px)`;
+    }
+
+    function shootArrow() {
+        disableArcheryControls();
+        isAnimatingArrow = true;
+
+        const startTime = performance.now();
+        const duration = 400;
+        const targetDistance = 245;
+
+        function animateFlight(currentTime) {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const travel = targetDistance * (1 - (1 - progress) * (1 - progress));
+
+            arrow.style.transform = `translateX(-50%) translateY(-${travel}px)`;
+
+            if (progress < 1) {
+                animFrameId = requestAnimationFrame(animateFlight);
+            } else {
+                evaluateMultiRingShot();
+            }
+        }
+        animFrameId = requestAnimationFrame(animateFlight);
+    }
+
+    function evaluateMultiRingShot() {
+        // Ideal center aim angle = ~48 degrees
+        const angleDiff = Math.abs(currentAimAngle - 48);
+        let pts = 0;
+        let ringText = "";
+
+        if (angleDiff <= 2) {
+            pts = 100;
+            ringText = "🎯 GOLD BULLSEYE! +100 Pts";
+        } else if (angleDiff <= 5) {
+            pts = 80;
+            ringText = "🔴 RED RING! +80 Pts";
+        } else if (angleDiff <= 9) {
+            pts = 60;
+            ringText = "🔵 BLUE RING! +60 Pts";
+        } else if (angleDiff <= 13) {
+            pts = 40;
+            ringText = "⚫ BLACK RING! +40 Pts";
+        } else {
+            pts = 20;
+            ringText = "⚪ WHITE RING! +20 Pts";
+        }
+
+        totalScore += pts;
+        document.getElementById('score-desc').innerText = `Total Points: ${totalScore}`;
+        showFeedback(ringText, "#27ae60");
+
+        setTimeout(() => {
+            hideFeedback();
+            advanceQuestion();
+        }, 1300);
+    }
+
+    function advanceQuestion() {
+        questionIndex++;
+        if (questionIndex >= 5) {
+            if (currentRound < 3) {
+                showRoundIntro(currentRound + 1);
+            } else {
+                document.getElementById('final-score').innerText = `${totalScore} Points`;
+                document.getElementById('gameover-screen').style.display = 'flex';
+            }
+        } else {
+            nextQuestion();
+        }
+    }
+
+    function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+        const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+        if (l2 === 0) return Math.hypot(px - x1, py - y1);
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+    }
+
+    function showFeedback(text, bgColor) {
+        feedback.innerText = text;
+        feedback.style.backgroundColor = bgColor;
+        feedback.style.display = 'block';
+    }
+
+    function hideFeedback() {
+        feedback.style.display = 'none';
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+</script>
+
+</body>
+</html>
