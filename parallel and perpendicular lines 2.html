@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Parallel and Perpendicular Lines - Crystal Cave</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #1a0b2e 0%, #090314 100%);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        .game-card {
+            width: 960px;
+            min-height: 680px;
+            background: rgba(23, 15, 41, 0.95);
+            border: 3px solid #7b2cbf;
+            border-radius: 20px;
+            box-shadow: 0 0 35px rgba(123, 44, 191, 0.5), inset 0 0 15px rgba(0, 242, 254, 0.2);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* PAGE SYSTEM */
+        .page {
+            display: none;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 25px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+        }
+
+        .page.active {
+            display: flex;
+        }
+
+        /* INTRO SCREEN */
+        .cave-decor {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .crystal-svg {
+            position: absolute;
+            filter: drop-shadow(0 0 12px rgba(0, 242, 254, 0.8));
+            animation: pulse 3s infinite alternate ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1) rotate(0deg); opacity: 0.8; }
+            100% { transform: scale(1.08) rotate(3deg); opacity: 1; }
+        }
+
+        .title-container {
+            text-align: center;
+            z-index: 2;
+        }
+
+        .main-title {
+            font-size: 42px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #00c6ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 20px;
+            color: #d8b4fe;
+            margin-bottom: 35px;
+            text-shadow: 0 0 8px rgba(216, 180, 254, 0.5);
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
+            color: #fff;
+            font-size: 22px;
+            font-weight: bold;
+            padding: 16px 45px;
+            border: 2px solid #e0aaff;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(157, 78, 221, 0.6);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .btn-start:hover {
+            transform: scale(1.08);
+            box-shadow: 0 0 30px rgba(224, 170, 255, 0.9);
+            background: linear-gradient(135deg, #9d4edd 0%, #c77dff 100%);
+        }
+
+        /* MODE SELECTION */
+        .mode-title {
+            font-size: 32px;
+            color: #00f2fe;
+            margin-bottom: 35px;
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        }
+
+        .mode-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+            max-width: 540px;
+            z-index: 2;
+        }
+
+        .btn-mode {
+            background: linear-gradient(135deg, #240046 0%, #3c096c 100%);
+            border: 2px solid #7b2cbf;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 18px 25px;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+        }
+
+        .btn-mode:hover {
+            transform: translateY(-4px);
+            border-color: #00f2fe;
+            background: linear-gradient(135deg, #3c096c 0%, #5a189a 100%);
+            box-shadow: 0 8px 25px rgba(0, 242, 254, 0.4);
+        }
+
+        .btn-mode span.badge {
+            background: #7b2cbf;
+            font-size: 14px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid #e0aaff;
+        }
+
+        /* GAMEPLAY SCREEN */
+        .status-header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(36, 0, 70, 0.8);
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid #5a189a;
+            margin-bottom: 12px;
+        }
+
+        .status-header div {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e0aaff;
+        }
+
+        .status-header span {
+            color: #00f2fe;
+        }
+
+        .instruction-box {
+            font-size: 19px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 10px;
+            text-align: center;
+            background: rgba(0, 242, 254, 0.1);
+            padding: 8px 20px;
+            border-radius: 30px;
+            border: 1px solid rgba(0, 242, 254, 0.3);
+        }
+
+        .canvas-area {
+            position: relative;
+            background: #ffffff;
+            border-radius: 16px;
+            border: 4px solid #7b2cbf;
+            box-shadow: 0 0 20px rgba(0,0,0,0.6);
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .controls-bar {
+            margin-top: 12px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .btn-no-pair {
+            background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 10px 25px;
+            border: 2px solid #ff7675;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(211, 47, 47, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .btn-no-pair:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(255, 118, 117, 0.8);
+        }
+
+        /* DIAMOND CATCHING MINIGAME MODAL */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(9, 3, 20, 0.94);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-title {
+            font-size: 32px;
+            color: #00f2fe;
+            margin-bottom: 5px;
+            text-shadow: 0 0 15px rgba(0, 242, 254, 0.6);
+        }
+
+        .modal-subtitle {
+            font-size: 18px;
+            color: #ff007f;
+            margin-bottom: 15px;
+            font-weight: bold;
+            animation: blink 1s infinite alternate;
+        }
+
+        @keyframes blink {
+            from { opacity: 0.7; }
+            to { opacity: 1; text-shadow: 0 0 10px #ff007f; }
+        }
+
+        /* Diamond Catching Arena */
+        .diamond-arena {
+            width: 520px;
+            height: 320px;
+            background: radial-gradient(circle, #240046 0%, #10002b 100%);
+            border: 3px solid #7b2cbf;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 25px rgba(123, 44, 191, 0.6);
+            margin-bottom: 20px;
+        }
+
+        .catching-diamond {
+            position: absolute;
+            width: 80px;
+            height: 90px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: top 0.2s ease, left 0.2s ease, opacity 0.3s ease;
+            filter: drop-shadow(0 0 12px rgba(0, 242, 254, 0.8));
+        }
+
+        .catching-diamond:hover {
+            transform: scale(1.15);
+        }
+
+        .catching-diamond.disabled {
+            pointer-events: none;
+            opacity: 0.2;
+        }
+
+        .catching-diamond.caught {
+            pointer-events: none;
+            transform: scale(1.25);
+            filter: drop-shadow(0 0 20px #00f2fe);
+        }
+
+        .diamond-points-text {
+            font-size: 18px;
+            font-weight: 900;
+            color: #00f2fe;
+            margin-top: 4px;
+            text-shadow: 0 0 8px #000;
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            padding: 12px 40px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.5);
+            display: none;
+            transition: transform 0.2s;
+        }
+
+        .btn-next:hover {
+            transform: scale(1.05);
+        }
+
+        .feedback-toast {
+            position: absolute;
+            bottom: 20px;
+            background: rgba(123, 44, 191, 0.95);
+            color: white;
+            padding: 12px 25px;
+            border-radius: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            display: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            border: 2px solid #00f2fe;
+            z-index: 10;
+        }
+
+        .feedback-toast.error {
+            background: rgba(231, 76, 60, 0.95);
+            border-color: #ff7675;
+        }
+
+        .feedback-toast.info {
+            background: rgba(0, 180, 216, 0.95);
+            border-color: #ffffff;
+        }
+
+        /* SUMMARY SCREEN */
+        .summary-card {
+            background: rgba(36, 0, 70, 0.9);
+            border: 2px solid #7b2cbf;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 0 30px rgba(0,0,0,0.6);
+        }
+
+        .final-score {
+            font-size: 56px;
+            font-weight: 900;
+            color: #00f2fe;
+            margin: 20px 0;
+            text-shadow: 0 0 20px rgba(0, 242, 254, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-card">
+
+    <!-- PAGE 1: TITLE & INTRO -->
+    <div class="page active" id="page-intro">
+        <div class="cave-decor">
+            <svg class="crystal-svg" style="top: 20px; left: 30px; width: 90px;" viewBox="0 0 100 120">
+                <polygon points="50,0 90,40 50,120 10,40" fill="#00f2fe" opacity="0.7"/>
+                <polygon points="50,0 90,40 50,120" fill="#4facfe" opacity="0.5"/>
+            </svg>
+            <svg class="crystal-svg" style="top: 40px; right: 40px; width: 110px; animation-delay: 1s;" viewBox="0 0 100 120">
+                <polygon points="50,0 85,35 50,115 15,35" fill="#9d4edd" opacity="0.8"/>
+                <polygon points="50,0 85,35 50,115" fill="#c77dff" opacity="0.5"/>
+            </svg>
+            <svg class="crystal-svg" style="bottom: 30px; left: 50px; width: 100px; animation-delay: 1.5s;" viewBox="0 0 100 120">
+                <polygon points="50,0 95,45 50,120 5,45" fill="#e0aaff" opacity="0.7"/>
+            </svg>
+            <svg class="crystal-svg" style="bottom: 20px; right: 60px; width: 120px; animation-delay: 0.5s;" viewBox="0 0 100 120">
+                <polygon points="50,0 90,40 50,120 10,40" fill="#00c6ff" opacity="0.8"/>
+            </svg>
+        </div>
+
+        <div class="title-container">
+            <div style="font-size: 60px; margin-bottom: 10px;">💎 🔮 💎</div>
+            <h1 class="main-title">Find Parallel and<br>Perpendicular Lines</h1>
+            <p class="subtitle">Procedurally Generated Geometry Quests!</p>
+            <button class="btn-start" onclick="goToPage('page-mode')">ENTER THE CAVE</button>
+        </div>
+    </div>
+
+    <!-- PAGE 2: MODE SELECTION -->
+    <div class="page" id="page-mode">
+        <h2 class="mode-title">Select Your Quest</h2>
+        <div class="mode-buttons-container">
+            <button class="btn-mode" onclick="startGame('parallel')">
+                <span>⚡ Find Parallel Lines</span>
+                <span class="badge">5 Random Shapes</span>
+            </button>
+            <button class="btn-mode" onclick="startGame('perpendicular')">
+                <span>📐 Find Perpendicular Lines</span>
+                <span class="badge">5 Random Shapes</span>
+            </button>
+            <button class="btn-mode" onclick="startGame('either')">
+                <span>🔮 Find Parallel or Perpendicular Lines</span>
+                <span class="badge">5 Random Shapes</span>
+            </button>
+        </div>
+        <button style="margin-top: 35px; background: transparent; border: none; color: #d8b4fe; cursor: pointer; font-size: 16px; text-decoration: underline;" onclick="goToPage('page-intro')">← Back to Title</button>
+    </div>
+
+    <!-- PAGE 3: GAMEPLAY -->
+    <div class="page" id="page-game">
+        <div class="status-header">
+            <div>Mode: <span id="lbl-mode">Parallel</span></div>
+            <div>Question: <span id="lbl-qnum">1/5</span></div>
+            <div>Attempts Left: <span id="lbl-attempts">2</span></div>
+            <div>Score: <span id="lbl-score">0</span></div>
+        </div>
+
+        <div class="instruction-box" id="lbl-instruction">
+            Click 2 PARALLEL lines on the shape!
+        </div>
+
+        <div class="canvas-area">
+            <canvas id="geometryCanvas" width="620" height="360"></canvas>
+            <div class="feedback-toast" id="feedback-toast"></div>
+        </div>
+
+        <div class="controls-bar">
+            <button class="btn-no-pair" id="btn-no-pair" onclick="checkNoPairAnswer()">🚫 No Pair Exists On This Shape</button>
+        </div>
+    </div>
+
+    <!-- DIAMOND CATCHING MINIGAME OVERLAY -->
+    <div class="modal-overlay" id="reward-modal">
+        <h2 class="modal-title">✨ Correct Answer! ✨</h2>
+        <p class="modal-subtitle">⚡ QUICK! Catch a diamond before it moves! (Changes every 1s)</p>
+
+        <div class="diamond-arena" id="diamond-arena">
+            <div class="catching-diamond" id="cdiamond-0" onclick="catchDiamond(0)">
+                <svg viewBox="0 0 100 100" width="60" height="60">
+                    <polygon points="50,5 90,30 50,95 10,30" fill="#00f2fe" stroke="#ffffff" stroke-width="2"/>
+                    <polygon points="50,5 90,30 50,95" fill="#4facfe" opacity="0.6"/>
+                </svg>
+                <div class="diamond-points-text" id="cdpts-0">?</div>
+            </div>
+            <div class="catching-diamond" id="cdiamond-1" onclick="catchDiamond(1)">
+                <svg viewBox="0 0 100 100" width="60" height="60">
+                    <polygon points="50,5 90,30 50,95 10,30" fill="#9d4edd" stroke="#ffffff" stroke-width="2"/>
+                    <polygon points="50,5 90,30 50,95" fill="#c77dff" opacity="0.6"/>
+                </svg>
+                <div class="diamond-points-text" id="cdpts-1">?</div>
+            </div>
+            <div class="catching-diamond" id="cdiamond-2" onclick="catchDiamond(2)">
+                <svg viewBox="0 0 100 100" width="60" height="60">
+                    <polygon points="50,5 90,30 50,95 10,30" fill="#f1c40f" stroke="#ffffff" stroke-width="2"/>
+                    <polygon points="50,5 90,30 50,95" fill="#f39c12" opacity="0.6"/>
+                </svg>
+                <div class="diamond-points-text" id="cdpts-2">?</div>
+            </div>
+        </div>
+
+        <button class="btn-next" id="btn-next-q" onclick="closeRewardModal()">Next Question →</button>
+    </div>
+
+    <!-- PAGE 4: SUMMARY PAGE -->
+    <div class="page" id="page-summary">
+        <div class="summary-card">
+            <h2 style="font-size: 32px; color: #00f2fe;">🏆 Quest Complete!</h2>
+            <p style="color: #d8b4fe; margin-top: 10px;">Total Points Collected:</p>
+            <div class="final-score" id="lbl-final-score">0 PTS</div>
+            <button class="btn-start" style="font-size: 18px; padding: 12px 30px;" onclick="goToPage('page-mode')">PLAY AGAIN</button>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let currentMode = 'parallel';
+    let currentQuestionIndex = 0;
+    let totalScore = 0;
+    let attemptsLeft = 2;
+    let selectedSegments = [];
+    let activeQuestionTarget = 'parallel';
+    let isEvaluating = false; // Prevents clicks during the 2-second highlight pause
+
+    // Minigame Variables
+    let diamondValues = [];
+    let diamondCaught = false;
+    let popInterval = null;
+
+    const canvas = document.getElementById('geometryCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let currentQuestionsList = [];
+    let currentShape = null;
+
+    const VERTEX_LABELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    // Dynamic Canvas Coordinates Scaling (Guarantees shape and labels never get cut off)
+    function getCanvasCoords(point) {
+        if (!currentShape || !currentShape.points) return { x: 0, y: 0 };
+
+        const keys = Object.keys(currentShape.points);
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+        keys.forEach(k => {
+            const pt = currentShape.points[k];
+            if (pt.x < minX) minX = pt.x;
+            if (pt.x > maxX) maxX = pt.x;
+            if (pt.y < minY) minY = pt.y;
+            if (pt.y > maxY) maxY = pt.y;
+        });
+
+        const padX = 75; // Safe padding for labels and thickness
+        const padY = 65;
+        const w = canvas.width;
+        const h = canvas.height;
+
+        const rangeX = (maxX - minX) || 1;
+        const rangeY = (maxY - minY) || 1;
+
+        const cx = padX + ((point.x - minX) / rangeX) * (w - 2 * padX);
+        const cy = (h - padY) - ((point.y - minY) / rangeY) * (h - 2 * padY);
+
+        return { x: cx, y: cy };
+    }
+
+    // Helper: calculate slope of segment
+    function getSegmentSlope(p1, p2) {
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        if (dx === 0) return Infinity;
+        return dy / dx;
+    }
+
+    // Check if 2 segments are parallel
+    function areParallel(p1, p2, p3, p4) {
+        const m1 = getSegmentSlope(p1, p2);
+        const m2 = getSegmentSlope(p3, p4);
+        if (m1 === Infinity && m2 === Infinity) return true;
+        return Math.abs(m1 - m2) < 0.001;
+    }
+
+    // Check if 2 segments are perpendicular
+    function arePerpendicular(p1, p2, p3, p4) {
+        const m1 = getSegmentSlope(p1, p2);
+        const m2 = getSegmentSlope(p3, p4);
+        if ((m1 === Infinity && Math.abs(m2) < 0.001) || (m2 === Infinity && Math.abs(m1) < 0.001)) return true;
+        if (m1 !== Infinity && m2 !== Infinity && Math.abs(m1 * m2 + 1) < 0.001) return true;
+        return false;
+    }
+
+    // Evaluate target pairs inside a constructed shape
+    function hasTargetPair(shape, targetType) {
+        const segs = shape.segments;
+        const pts = shape.points;
+        for (let i = 0; i < segs.length; i++) {
+            for (let j = i + 1; j < segs.length; j++) {
+                const s1 = segs[i], s2 = segs[j];
+                const p1 = pts[s1.p1], p2 = pts[s1.p2];
+                const p3 = pts[s2.p1], p4 = pts[s2.p2];
+
+                if (targetType === 'parallel' && areParallel(p1, p2, p3, p4)) return true;
+                if (targetType === 'perpendicular' && arePerpendicular(p1, p2, p3, p4)) return true;
+            }
+        }
+        return false;
+    }
+
+    // --- EXPANDED PROCEDURAL GENERATORS FOR DIFFERENT SECTIONS ---
+    function generateProceduralQuestion(targetType, forceNoTarget = false) {
+        let wantTarget = forceNoTarget ? false : (Math.random() < 0.75);
+
+        for (let attempt = 0; attempt < 100; attempt++) {
+            let shape = null;
+
+            if (!wantTarget) {
+                shape = generateIrregularPolygon();
+            } else if (targetType === 'parallel') {
+                shape = generateParallelShape();
+            } else {
+                shape = generatePerpendicularShape();
+            }
+
+            const actualHasTarget = hasTargetPair(shape, targetType);
+            if (wantTarget === actualHasTarget) {
+                shape.hasTarget = actualHasTarget;
+                return shape;
+            }
+        }
+
+        return generateFallbackShape(targetType, wantTarget);
+    }
+
+    // Generator 1: Irregular Polygons (Guaranteed no parallel/perpendicular pairs)
+    function generateIrregularPolygon() {
+        const type = getRandomInt(1, 3);
+        const points = {};
+        const baseCoords = [];
+
+        if (type === 1) { // 5-point irregular notch
+            baseCoords.push(
+                { x: getRandomInt(1, 3), y: getRandomInt(2, 4) },
+                { x: getRandomInt(2, 4), y: getRandomInt(7, 9) },
+                { x: getRandomInt(6, 8), y: getRandomInt(8, 10) },
+                { x: getRandomInt(9, 11), y: getRandomInt(4, 6) },
+                { x: getRandomInt(5, 7), y: getRandomInt(1, 2) }
+            );
+        } else if (type === 2) { // 6-point asymmetric star/arrow
+            baseCoords.push(
+                { x: getRandomInt(1, 2), y: getRandomInt(5, 7) },
+                { x: getRandomInt(4, 5), y: getRandomInt(8, 10) },
+                { x: getRandomInt(9, 11), y: getRandomInt(7, 9) },
+                { x: getRandomInt(7, 8), y: getRandomInt(4, 5) },
+                { x: getRandomInt(10, 11), y: getRandomInt(1, 2) },
+                { x: getRandomInt(3, 4), y: getRandomInt(1, 3) }
+            );
+        } else { // Scalene 4-point wedge
+            baseCoords.push(
+                { x: getRandomInt(1, 2), y: getRandomInt(1, 3) },
+                { x: getRandomInt(2, 4), y: getRandomInt(7, 9) },
+                { x: getRandomInt(8, 10), y: getRandomInt(6, 8) },
+                { x: getRandomInt(11, 12), y: getRandomInt(1, 2) }
+            );
+        }
+
+        baseCoords.forEach((pt, i) => points[VERTEX_LABELS[i]] = pt);
+        const segments = [];
+        for (let i = 0; i < baseCoords.length; i++) {
+            const nextIdx = (i + 1) % baseCoords.length;
+            segments.push({
+                name: `${VERTEX_LABELS[i]}${VERTEX_LABELS[nextIdx]}`,
+                p1: VERTEX_LABELS[i],
+                p2: VERTEX_LABELS[nextIdx]
+            });
+        }
+        return { points, segments };
+    }
+
+    // Generator 2: Diverse Parallel Shapes
+    function generateParallelShape() {
+        const variant = getRandomInt(1, 5);
+        const points = {};
+        const segments = [];
+
+        if (variant === 1) { // Scalene Trapezoid
+            const topY = getRandomInt(6, 8), botY = getRandomInt(1, 3);
+            points['A'] = { x: getRandomInt(1, 3), y: botY };
+            points['B'] = { x: getRandomInt(3, 5), y: topY };
+            points['C'] = { x: getRandomInt(7, 9), y: topY }; // BC parallel to AD
+            points['D'] = { x: getRandomInt(10, 12), y: botY };
+        } else if (variant === 2) { // Parallelogram
+            const dx = getRandomInt(2, 4), dy = getRandomInt(4, 6);
+            const baseW = getRandomInt(4, 6);
+            points['A'] = { x: 2, y: 2 };
+            points['B'] = { x: 2 + dx, y: 2 + dy };
+            points['C'] = { x: 2 + dx + baseW, y: 2 + dy };
+            points['D'] = { x: 2 + baseW, y: 2 };
+        } else if (variant === 3) { // Hexagon with vertical parallel sides
+            const xL = getRandomInt(2, 3), xR = getRandomInt(9, 10);
+            points['A'] = { x: xL, y: 2 };
+            points['B'] = { x: xL, y: 7 }; // AB vertical
+            points['C'] = { x: 6, y: 9 };
+            points['D'] = { x: xR, y: 7 };
+            points['E'] = { x: xR, y: 2 }; // DE vertical parallel to AB
+            points['F'] = { x: 6, y: 1 };
+        } else if (variant === 4) { // Double Parallel Arrowhead
+            const w = getRandomInt(3, 5);
+            points['A'] = { x: 2, y: 5 };
+            points['B'] = { x: 2 + w, y: 8 };
+            points['C'] = { x: 2 + w * 2, y: 5 };
+            points['D'] = { x: 2 + w, y: 2 }; // Opposite slant parallel
+        } else { // Slanted Rhomboid / Diamond
+            points['A'] = { x: 2, y: 5 };
+            points['B'] = { x: 6, y: 9 };
+            points['C'] = { x: 10, y: 5 };
+            points['D'] = { x: 6, y: 1 };
+        }
+
+        const keys = Object.keys(points);
+        for (let i = 0; i < keys.length; i++) {
+            const nextIdx = (i + 1) % keys.length;
+            segments.push({
+                name: `${keys[i]}${keys[nextIdx]}`,
+                p1: keys[i],
+                p2: keys[nextIdx]
+            });
+        }
+        return { points, segments };
+    }
+
+    // Generator 3: Diverse Perpendicular Shapes
+    function generatePerpendicularShape() {
+        const variant = getRandomInt(1, 4);
+        const points = {};
+        const segments = [];
+
+        if (variant === 1) { // Right-angled L-shape
+            points['A'] = { x: 2, y: 2 };
+            points['B'] = { x: 2, y: 8 }; // AB vertical
+            points['C'] = { x: 5, y: 8 };
+            points['D'] = { x: 5, y: 4 };
+            points['E'] = { x: 9, y: 4 };
+            points['F'] = { x: 9, y: 2 }; // FA horizontal (AB perp to FA)
+        } else if (variant === 2) { // Right Trapezoid
+            points['A'] = { x: 2, y: 2 };
+            points['B'] = { x: 2, y: 7 }; // AB vertical
+            points['C'] = { x: 6, y: 7 }; // BC horizontal (AB ⊥ BC)
+            points['D'] = { x: 10, y: 2 };
+        } else if (variant === 3) { // Slanted Right Triangle
+            const x0 = getRandomInt(2, 3), y0 = getRandomInt(2, 3);
+            const dx = getRandomInt(3, 4), dy = getRandomInt(1, 3);
+            points['A'] = { x: x0, y: y0 };
+            points['B'] = { x: x0 + dx, y: y0 + dy }; // slope dy/dx
+            points['C'] = { x: x0 + dx - dy, y: y0 + dy + dx }; // AB ⊥ BC
+            points['D'] = { x: x0 - 1, y: y0 + dy + 1 };
+        } else { // T-Shape polygon with multiple right angles
+            points['A'] = { x: 2, y: 6 };
+            points['B'] = { x: 10, y: 6 };
+            points['C'] = { x: 10, y: 8 };
+            points['D'] = { x: 2, y: 8 };
+            points['E'] = { x: 5, y: 2 };
+            points['F'] = { x: 7, y: 2 };
+        }
+
+        const keys = Object.keys(points);
+        for (let i = 0; i < keys.length; i++) {
+            const nextIdx = (i + 1) % keys.length;
+            segments.push({
+                name: `${keys[i]}${keys[nextIdx]}`,
+                p1: keys[i],
+                p2: keys[nextIdx]
+            });
+        }
+        return { points, segments };
+    }
+
+    function generateFallbackShape(targetType, wantTarget) {
+        if (!wantTarget) {
+            return generateIrregularPolygon();
+        }
+        return (targetType === 'parallel') ? generateParallelShape() : generatePerpendicularShape();
+    }
+
+    // --- GAME ENGINE LOGIC ---
+    function goToPage(pageId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+    }
+
+    function startGame(mode) {
+        currentMode = mode;
+        currentQuestionIndex = 0;
+        totalScore = 0;
+
+        currentQuestionsList = [];
+        const noTargetIndex = getRandomInt(0, 4);
+
+        for (let i = 0; i < 5; i++) {
+            let qTargetType = 'parallel';
+            if (mode === 'perpendicular') {
+                qTargetType = 'perpendicular';
+            } else if (mode === 'either') {
+                qTargetType = (i % 2 === 0) ? 'parallel' : 'perpendicular';
+            }
+
+            const forceNoTarget = (i === noTargetIndex);
+            const qShape = generateProceduralQuestion(qTargetType, forceNoTarget);
+            qShape.targetType = qTargetType;
+            currentQuestionsList.push(qShape);
+        }
+
+        goToPage('page-game');
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        selectedSegments = [];
+        attemptsLeft = 2;
+        isEvaluating = false;
+
+        currentShape = currentQuestionsList[currentQuestionIndex];
+        activeQuestionTarget = currentShape.targetType;
+
+        document.getElementById('lbl-mode').innerText = currentMode.toUpperCase();
+        document.getElementById('lbl-qnum').innerText = `${currentQuestionIndex + 1} / 5`;
+        document.getElementById('lbl-attempts').innerText = attemptsLeft;
+        document.getElementById('lbl-score').innerText = totalScore;
+
+        const instructionText = (activeQuestionTarget === 'parallel')
+            ? "Click 2 PARALLEL lines (//) or click 'No Pair Exists'!"
+            : "Click 2 PERPENDICULAR lines (⊥) or click 'No Pair Exists'!";
+        document.getElementById('lbl-instruction').innerText = instructionText;
+
+        drawScene();
+    }
+
+    function drawScene() {
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw light background grid
+        ctx.strokeStyle = '#f0f4f8';
+        ctx.lineWidth = 1;
+        for (let x = 0; x <= w; x += 40) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, h);
+            ctx.stroke();
+        }
+        for (let y = 0; y <= h; y += 40) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(w, y);
+            ctx.stroke();
+        }
+
+        if (!currentShape) return;
+
+        // Draw shape segments using dynamically scaled canvas coordinates
+        currentShape.segments.forEach(seg => {
+            const c1 = getCanvasCoords(currentShape.points[seg.p1]);
+            const c2 = getCanvasCoords(currentShape.points[seg.p2]);
+
+            const isSelected = selectedSegments.includes(seg);
+
+            ctx.beginPath();
+            ctx.moveTo(c1.x, c1.y);
+            ctx.lineTo(c2.x, c2.y);
+            ctx.lineWidth = isSelected ? 8 : 4;
+            ctx.strokeStyle = isSelected ? '#ff007f' : '#1a0b2e';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        });
+
+        // Draw Vertices and Labels
+        Object.keys(currentShape.points).forEach(key => {
+            const pt = currentShape.points[key];
+            const c = getCanvasCoords(pt);
+
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, 6, 0, Math.PI * 2);
+            ctx.fillStyle = '#7b2cbf';
+            ctx.fill();
+
+            // Smart offsets so labels stay visible inside bounds
+            const labelOffsetX = (c.x > w - 45) ? -22 : 10;
+            const labelOffsetY = (c.y < 35) ? 22 : -10;
+
+            ctx.font = 'bold 16px Segoe UI';
+            ctx.fillStyle = '#000000';
+            ctx.fillText(key, c.x + labelOffsetX, c.y + labelOffsetY);
+        });
+    }
+
+    canvas.addEventListener('click', (e) => {
+        if (!currentShape || selectedSegments.length >= 2 || isEvaluating) return;
+
+        const rect = canvas.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickY = e.clientY - rect.top;
+
+        let clickedSeg = null;
+        let minDistance = 18;
+
+        currentShape.segments.forEach(seg => {
+            const c1 = getCanvasCoords(currentShape.points[seg.p1]);
+            const c2 = getCanvasCoords(currentShape.points[seg.p2]);
+
+            const dist = pointToSegmentDistance(clickX, clickY, c1.x, c1.y, c2.x, c2.y);
+            if (dist < minDistance) {
+                clickedSeg = seg;
+            }
+        });
+
+        if (clickedSeg) {
+            const index = selectedSegments.indexOf(clickedSeg);
+            if (index > -1) {
+                selectedSegments.splice(index, 1);
+            } else {
+                selectedSegments.push(clickedSeg);
+            }
+            drawScene();
+
+            // When 2 lines are selected, pause 2 SECONDS so player can view selected lines clearly!
+            if (selectedSegments.length === 2) {
+                isEvaluating = true;
+                const lineNames = `${selectedSegments[0].name} & ${selectedSegments[1].name}`;
+                showToast(`Selected: ${lineNames}. Checking...`, 2000, 'info');
+
+                setTimeout(() => {
+                    verifyAnswer();
+                    isEvaluating = false;
+                }, 2000); // 2-second highlight pause
+            }
+        }
+    });
+
+    function verifyAnswer() {
+        const [s1, s2] = selectedSegments;
+        const p1a = currentShape.points[s1.p1], p1b = currentShape.points[s1.p2];
+        const p2a = currentShape.points[s2.p1], p2b = currentShape.points[s2.p2];
+
+        let isCorrect = false;
+        if (activeQuestionTarget === 'parallel' && areParallel(p1a, p1b, p2a, p2b)) {
+            isCorrect = true;
+        } else if (activeQuestionTarget === 'perpendicular' && arePerpendicular(p1a, p1b, p2a, p2b)) {
+            isCorrect = true;
+        }
+
+        if (isCorrect) {
+            openRewardModal();
+        } else {
+            handleWrongAnswer("Wrong pair! Try 1 more time 💡");
+        }
+    }
+
+    function checkNoPairAnswer() {
+        if (isEvaluating) return;
+        if (!currentShape.hasTarget) {
+            openRewardModal();
+        } else {
+            handleWrongAnswer("Incorrect! A target pair DOES exist on this shape!");
+        }
+    }
+
+    function handleWrongAnswer(msg) {
+        attemptsLeft--;
+        document.getElementById('lbl-attempts').innerText = attemptsLeft;
+
+        if (attemptsLeft > 0) {
+            showToast(msg, 1800, 'error');
+            selectedSegments = [];
+            setTimeout(() => drawScene(), 1200);
+        } else {
+            showToast("Out of attempts! Moving to next question...", 1800, 'error');
+            setTimeout(() => {
+                advanceQuestion();
+            }, 1800);
+        }
+    }
+
+    // --- DIAMOND CATCHING MINIGAME LOGIC ---
+    function openRewardModal() {
+        diamondCaught = false;
+        document.getElementById('btn-next-q').style.display = 'none';
+
+        const randomMidScore = Math.floor(Math.random() * 4) * 10 + 30;
+        diamondValues = [100, randomMidScore, 0];
+        diamondValues.sort(() => Math.random() - 0.5);
+
+        for (let i = 0; i < 3; i++) {
+            const elem = document.getElementById(`cdiamond-${i}`);
+            elem.classList.remove('disabled', 'caught');
+            document.getElementById(`cdpts-${i}`).innerText = "?";
+        }
+
+        document.getElementById('reward-modal').classList.add('active');
+
+        repositionDiamonds();
+        popInterval = setInterval(repositionDiamonds, 1000);
+    }
+
+    function repositionDiamonds() {
+        if (diamondCaught) return;
+
+        const arenaWidth = 420;
+        const arenaHeight = 220;
+
+        for (let i = 0; i < 3; i++) {
+            const elem = document.getElementById(`cdiamond-${i}`);
+            const randomX = Math.floor(Math.random() * arenaWidth) + 10;
+            const randomY = Math.floor(Math.random() * arenaHeight) + 10;
+
+            elem.style.left = `${randomX}px`;
+            elem.style.top = `${randomY}px`;
+        }
+    }
+
+    function catchDiamond(idx) {
+        if (diamondCaught) return;
+        diamondCaught = true;
+
+        clearInterval(popInterval);
+
+        const earned = diamondValues[idx];
+        totalScore += earned;
+        document.getElementById('lbl-score').innerText = totalScore;
+
+        for (let i = 0; i < 3; i++) {
+            const elem = document.getElementById(`cdiamond-${i}`);
+            if (i === idx) {
+                elem.classList.add('caught');
+                document.getElementById(`cdpts-${i}`).innerText = `+${earned} PTS`;
+            } else {
+                elem.classList.add('disabled');
+            }
+        }
+
+        document.getElementById('btn-next-q').style.display = 'block';
+    }
+
+    function closeRewardModal() {
+        clearInterval(popInterval);
+        document.getElementById('reward-modal').classList.remove('active');
+        advanceQuestion();
+    }
+
+    function advanceQuestion() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < 5) {
+            loadQuestion();
+        } else {
+            document.getElementById('lbl-final-score').innerText = `${totalScore} PTS`;
+            goToPage('page-summary');
+        }
+    }
+
+    function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+        const l2 = (x2 - x1) ** 2 + (y2 - y1) ** 2;
+        if (l2 === 0) return Math.hypot(px - x1, py - y1);
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+    }
+
+    function showToast(text, duration = 1500, type = '') {
+        const toast = document.getElementById('feedback-toast');
+        toast.className = 'feedback-toast ' + type;
+        toast.innerText = text;
+        toast.style.display = 'block';
+        setTimeout(() => {
+            toast.style.display = 'none';
+        }, duration);
+    }
+</script>
+
+</body>
+</html>
