@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping Game - Math Adventure</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            purple: '#6C5CE7',
+                            pink: '#FD79A8',
+                            yellow: '#FDCB6E',
+                            green: '#00B894',
+                            blue: '#0984E3',
+                            orange: '#E17055'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Fredoka', 'Quicksand', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .bounce-in {
+            animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); opacity: 1; }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+
+        .stamp-glow {
+            box-shadow: 0 0 15px #fdcb6e;
+            animation: pulseGlow 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 10px #fdcb6e; }
+            50% { transform: scale(1.08); box-shadow: 0 0 20px #ffeaa7; }
+        }
+
+        /* Custom scrollbar for shop items */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-amber-50 text-slate-800 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-white border-b-4 border-amber-200 shadow-sm sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Game Title & Mascot -->
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-amber-400 rounded-2xl flex items-center justify-center text-2xl shadow-md transform -rotate-3 hover:rotate-0 transition-transform">
+                    🛒
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800 tracking-wide leading-none">Super Shop Math</h1>
+                    <span class="text-xs font-semibold text-amber-600 tracking-wider uppercase">Primary 1 Addition & Regrouping</span>
+                </div>
+            </div>
+
+            <!-- Stamp Card Progress Tracker -->
+            <div class="bg-amber-100/80 px-4 py-2 rounded-2xl border-2 border-amber-300 flex items-center gap-3">
+                <div class="text-xs font-bold uppercase tracking-wider text-amber-900 hidden sm:block">
+                    Stamp Card
+                </div>
+                <div class="flex gap-2" id="stamp-container">
+                    <!-- 5 Stamp Slots filled dynamically -->
+                </div>
+                <button id="wheel-btn" onclick="openWheelModal()" class="hidden bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-amber-950 font-bold px-3 py-1.5 rounded-xl shadow-md text-sm flex items-center gap-1.5 stamp-glow cursor-pointer transition-transform active:scale-95">
+                    <i class="fa-solid font-bold fa-spinner animate-spin"></i>
+                    <span>Spin Wheel!</span>
+                </button>
+            </div>
+
+            <!-- Gallery Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="openGalleryModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-200 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5 transition-colors">
+                    <i class="fa-solid fa-trophy text-amber-500"></i>
+                    <span id="prize-count-badge">0 Prizes</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main App Container -->
+    <main class="max-w-6xl mx-auto px-4 py-6 w-full flex-grow flex flex-col gap-6">
+
+        <!-- Level Selector Tabs -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
+            <button onclick="switchLevel(1)" id="lvl-tab-1" class="lvl-tab bg-white border-b-4 border-slate-300 p-3 rounded-2xl text-left shadow-sm hover:shadow-md transition-all">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-amber-600 uppercase">Level 1</span>
+                    <span class="text-lg">🧸</span>
+                </div>
+                <div class="font-bold text-slate-800 text-sm sm:text-base">Exact 2 Items</div>
+                <div class="text-xs text-slate-500">Pick 2 items to match target</div>
+            </button>
+
+            <button onclick="switchLevel(2)" id="lvl-tab-2" class="lvl-tab bg-white border-b-4 border-slate-300 p-3 rounded-2xl text-left shadow-sm hover:shadow-md transition-all">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-indigo-600 uppercase">Level 2</span>
+                    <span class="text-lg">📦</span>
+                </div>
+                <div class="font-bold text-slate-800 text-sm sm:text-base">3 to 5 Items</div>
+                <div class="text-xs text-slate-500">Only 1 of each item</div>
+            </button>
+
+            <button onclick="switchLevel(3)" id="lvl-tab-3" class="lvl-tab bg-white border-b-4 border-slate-300 p-3 rounded-2xl text-left shadow-sm hover:shadow-md transition-all">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-rose-600 uppercase">Level 3</span>
+                    <span class="text-lg">🛍️</span>
+                </div>
+                <div class="font-bold text-slate-800 text-sm sm:text-base">Multiple Qty</div>
+                <div class="text-xs text-slate-500">At least 1 item > 1 qty</div>
+            </button>
+        </div>
+
+        <!-- Target Budget & Constraint Notification Banner -->
+        <div class="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 rounded-3xl p-5 text-white shadow-lg relative overflow-hidden">
+            <div class="absolute -right-6 -bottom-6 text-white/10 text-9xl font-black pointer-events-none">
+                $
+            </div>
+            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-4 text-center md:text-left">
+                    <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-3xl backdrop-blur-md shadow-inner">
+                        🎯
+                    </div>
+                    <div>
+                        <div class="text-amber-100 font-bold uppercase tracking-wider text-xs">Target Shopping Budget</div>
+                        <div class="flex items-center gap-2 mt-1">
+                            <button onclick="changeTargetBudget(-1)" class="w-9 h-9 bg-white/20 hover:bg-white/30 text-white font-extrabold rounded-xl flex items-center justify-center text-base transition-transform active:scale-95 shadow-inner cursor-pointer" title="Decrease Target Budget">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <div class="text-2xl sm:text-3xl font-extrabold tracking-tight min-w-[130px] text-center" id="target-budget-display">
+                                Target: $0
+                            </div>
+                            <button onclick="changeTargetBudget(1)" class="w-9 h-9 bg-white/20 hover:bg-white/30 text-white font-extrabold rounded-xl flex items-center justify-center text-base transition-transform active:scale-95 shadow-inner cursor-pointer" title="Increase Target Budget">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Level Constraint Chip -->
+                <div class="bg-white/90 text-slate-800 backdrop-blur-md px-4 py-2.5 rounded-2xl font-medium text-xs sm:text-sm border border-white/50 shadow-sm flex items-center gap-2 max-w-md">
+                    <i class="fa-solid fa-circle-info text-amber-500 text-base"></i>
+                    <span id="level-rule-text">Follow the shopping rule to win a stamp!</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gameplay Workspace Area (Items Store + Cart) -->
+        <div id="gameplay-area" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            <!-- Standard Store Shelf (Levels 1 - 3) -->
+            <div id="standard-shop-section" class="lg:col-span-7 bg-white p-5 rounded-3xl border-2 border-slate-200 shadow-sm flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <span>🏷️ Store Shelf</span>
+                        <span class="text-xs font-normal text-slate-500">(Click items to add to basket)</span>
+                    </h2>
+                    <button onclick="generateNewQuestion()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right"></i> New Challenge
+                    </button>
+                </div>
+
+                <!-- Item Cards Grid -->
+                <div id="store-items-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[480px] overflow-y-auto pr-1">
+                    <!-- Items rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Right Column: Shopping Cart & Place Value Helper -->
+            <div class="lg:col-span-5 flex flex-col gap-5">
+                
+                <!-- Shopping Cart Container -->
+                <div class="bg-white p-5 rounded-3xl border-2 border-slate-200 shadow-sm flex flex-col gap-4">
+                    <div class="flex items-center justify-between border-b pb-3 border-slate-100">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <span>🛒 My Basket</span>
+                            <span id="cart-count-badge" class="bg-amber-100 text-amber-800 text-xs px-2.5 py-0.5 rounded-full font-bold">0 items</span>
+                        </h2>
+                        <button onclick="clearCart()" class="text-xs text-rose-500 hover:text-rose-700 font-bold transition-colors">
+                            Clear Basket
+                        </button>
+                    </div>
+
+                    <!-- Cart Items List -->
+                    <div id="cart-items-list" class="flex flex-col gap-2 min-h-[140px] max-h-[220px] overflow-y-auto pr-1">
+                        <div class="text-center text-slate-400 py-8 text-sm">
+                            Your basket is empty.<br>Select items from the shelf!
+                        </div>
+                    </div>
+
+                    <!-- Cart Total & Place Value Breakdown -->
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col gap-3">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            <label for="player-total-input" class="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                                <i class="fa-solid fa-calculator text-amber-500"></i> Key in Basket Total ($):
+                            </label>
+                            <div class="relative w-full sm:w-36">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 font-extrabold text-amber-600 text-lg">$</span>
+                                <input type="number" id="player-total-input" min="0" max="99" placeholder="0" class="w-full bg-white border-2 border-amber-300 focus:border-amber-500 rounded-xl pl-7 pr-3 py-1.5 font-extrabold text-amber-600 text-right text-lg outline-none shadow-inner">
+                            </div>
+                        </div>
+
+                        <!-- Place-Value Tens and Ones Visualizer -->
+                        <div class="pt-2 border-t border-slate-200 flex flex-col gap-2">
+                            <div class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                                <span>Place-Value Regrouping</span>
+                                <span class="text-indigo-600" id="place-value-math">0 Tens + 0 Ones</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 min-h-[36px] items-center" id="place-value-blocks">
+                                <span class="text-xs text-slate-400 italic">Add items to see $10 notes and $1 coins</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Checkout / Pay Action Button -->
+                    <button id="checkout-btn" onclick="checkAnswer()" class="w-full bg-emerald-500 hover:bg-emerald-600 active:scale-[0.98] text-white text-lg font-extrabold py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-cash-register"></i>
+                        <span>Check Out & Pay</span>
+                    </button>
+                </div>
+
+                <!-- Helper Tip Card -->
+                <div class="bg-amber-100/60 border border-amber-300 rounded-2xl p-4 text-xs text-amber-900 flex items-start gap-3">
+                    <div class="text-xl">💡</div>
+                    <div>
+                        <div class="font-bold mb-0.5">Primary 1 Math Tip:</div>
+                        <div id="level-hint-text">Count the <strong>$10 notes</strong> first, then add the <strong>$1 coins</strong> to check your total!</div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- MODAL 1: Wheel of Fortune Modal -->
+    <div id="wheel-modal" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl flex flex-col items-center gap-4 border-4 border-amber-300 bounce-in relative">
+            
+            <h2 class="text-2xl font-black text-amber-600 text-center flex items-center gap-2">
+                <span>🎡 Wheel of Fortune</span>
+            </h2>
+            <p class="text-xs text-slate-600 text-center font-medium">You collected 5 stamps! Spin the wheel to claim your prize!</p>
+
+            <!-- Wheel Canvas Container -->
+            <div class="relative w-64 h-64 my-2">
+                <!-- Pointer Arrow -->
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 z-20 w-0 h-0 border-l-[12px] border-l-transparent border-r-[12px] border-r-transparent border-t-[20px] border-t-rose-600 drop-shadow-md"></div>
+                
+                <canvas id="wheel-canvas" width="256" height="256" class="rounded-full shadow-lg border-4 border-amber-400"></canvas>
+            </div>
+
+            <button id="spin-action-btn" onclick="spinWheel()" class="w-full bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-amber-950 font-black text-xl py-3 rounded-2xl shadow-lg transition-transform active:scale-95">
+                SPIN NOW! 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Prize Winner Reveal Modal -->
+    <div id="prize-modal" class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center text-center gap-4 border-4 border-yellow-400 bounce-in">
+            <div class="text-xs font-black uppercase tracking-widest text-amber-500">Congratulations!</div>
+            <div id="prize-icon-large" class="text-7xl my-2 animate-bounce">🎁</div>
+            <h3 id="prize-name-display" class="text-2xl font-extrabold text-slate-800">You Won a Toy Drone!</h3>
+            <p class="text-xs text-slate-500">Added to your prize trophy gallery!</p>
+
+            <button onclick="closePrizeModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl shadow-md transition-all">
+                Collect & Continue Shopping ✨
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Prize Trophy Gallery Drawer/Modal -->
+    <div id="gallery-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl flex flex-col gap-4 border-2 border-slate-200">
+            <div class="flex items-center justify-between border-b pb-3 border-slate-100">
+                <h3 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span>🏆 Prize Collection</span>
+                </h3>
+                <button onclick="closeGalleryModal()" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div id="gallery-grid" class="grid grid-cols-3 gap-3 min-h-[180px] max-h-[300px] overflow-y-auto p-1">
+                <!-- Prizes dynamic list -->
+            </div>
+
+            <div class="text-center text-xs text-slate-400 border-t pt-3">
+                Complete 5 stamps to earn another prize spin!
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: Feedback Modal (Correct / Try Again) -->
+    <div id="feedback-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl flex flex-col items-center text-center gap-3 bounce-in" id="feedback-card font-sans">
+            <div id="feedback-icon" class="text-6xl">🌟</div>
+            <h3 id="feedback-title" class="text-2xl font-extrabold text-slate-800">Great Job!</h3>
+            <p id="feedback-message" class="text-xs text-slate-600 leading-relaxed">You bought items totaling $45!</p>
+            <button onclick="closeFeedbackModal()" id="feedback-btn" class="w-full mt-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl shadow-md transition-colors">
+                Next Challenge
+            </button>
+        </div>
+    </div>
+
+    <script>
+    let currentLevel = 1;
+    let stampsCount = 0;
+    let currentTargetBudget = 0;
+    let currentSolutionItems = [];
+    let cart = [];
+    let collectedPrizes = [];
+
+    // Prize Catalog for Wheel of Fortune
+    const prizeCatalog = [
+        { name: "Toy Drone", icon: "🛸", color: "#FF7675" },
+        { name: "Cute Teddy", icon: "🧸", color: "#74B9FF" },
+        { name: "Super Robot", icon: "🤖", color: "#55E6C1" },
+        { name: "Magic Wand", icon: "🪄", color: "#FDCB6E" },
+        { name: "Race Car", icon: "🏎️", color: "#E17055" },
+        { name: "Golden Star", icon: "⭐", color: "#A29BFE" }
+    ];
+
+    function changeTargetBudget(delta) {
+        currentTargetBudget = Math.max(5, Math.min(99, currentTargetBudget + delta));
+        const display = document.getElementById('target-budget-display');
+        if (display) display.textContent = `Target: $${currentTargetBudget}`;
+    }
+
+    // Standard Item Pool for Levels 1-3
+    const itemPool = [
+        { id: 1, name: "Teddy Bear", price: 12, icon: "🧸" },
+        { id: 2, name: "Toy Robot", price: 25, icon: "🤖" },
+        { id: 3, name: "Story Book", price: 8, icon: "📚" },
+        { id: 4, name: "Color Pencils", price: 6, icon: "✏️" },
+        { id: 5, name: "Building Blocks", price: 18, icon: "🧩" },
+        { id: 6, name: "Toy Car", price: 15, icon: "🚗" },
+        { id: 7, name: "Water Bottle", price: 10, icon: "🧃" },
+        { id: 8, name: "School Bag", price: 34, icon: "🎒" },
+        { id: 9, name: "Art Paint Set", price: 22, icon: "🎨" },
+        { id: 10, name: "Board Game", price: 28, icon: "🎲" },
+        { id: 11, name: "Basketball", price: 19, icon: "🏀" },
+        { id: 12, name: "Cute Plushie", price: 14, icon: "🐰" },
+        { id: 13, name: "Snack Box", price: 7, icon: "🍱" },
+        { id: 14, name: "Digital Watch", price: 31, icon: "⌚" },
+        { id: 15, name: "Sunglasses", price: 11, icon: "🕶️" }
+    ];
+
+    function switchLevel(lvl) {
+        currentLevel = lvl;
+
+        for (let i = 1; i <= 3; i++) {
+            const btn = document.getElementById(`lvl-tab-${i}`);
+            if (i === lvl) {
+                btn.classList.add('border-amber-500', 'bg-amber-50/80', 'ring-2', 'ring-amber-300');
+                btn.classList.remove('border-slate-300', 'bg-white');
+            } else {
+                btn.classList.remove('border-amber-500', 'bg-amber-50/80', 'ring-2', 'ring-amber-300');
+                btn.classList.add('border-slate-300', 'bg-white');
+            }
+        }
+
+        const ruleText = document.getElementById('level-rule-text');
+        const hintText = document.getElementById('level-hint-text');
+
+        if (lvl === 1) {
+            ruleText.textContent = "Rule: Choose EXACTLY 2 items that add up to the target budget.";
+            hintText.innerHTML = "Pick <strong>2 items</strong>. Add their prices together using $10s and $1s!";
+        } else if (lvl === 2) {
+            ruleText.textContent = "Rule: Choose 3 to 5 items (Max 1 quantity per item).";
+            hintText.innerHTML = "Pick <strong>3, 4, or 5 different items</strong>. Keep quantity at 1 for each!";
+        } else if (lvl === 3) {
+            ruleText.textContent = "Rule: Pick multiple items & make sure at least 1 item has quantity > 1!";
+            hintText.innerHTML = "Use the <strong>+ button</strong> in your basket to increase an item's quantity to 2 or more!";
+        }
+
+        generateNewQuestion();
+    }
+
+    function generateNewQuestion() {
+        clearCart();
+
+        let selectedCombination = [];
+        let targetSum = 0;
+
+        if (currentLevel === 1) {
+            const shuffle = [...itemPool].sort(() => 0.5 - Math.random());
+            selectedCombination = [shuffle[0], shuffle[1]];
+            targetSum = shuffle[0].price + shuffle[1].price;
+        } else if (currentLevel === 2) {
+            const count = Math.floor(Math.random() * 3) + 3;
+            const shuffle = [...itemPool].sort(() => 0.5 - Math.random());
+            selectedCombination = shuffle.slice(0, count);
+            targetSum = selectedCombination.reduce((acc, item) => acc + item.price, 0);
+        } else if (currentLevel === 3) {
+            // Level 3 allows selecting more items (3 to 5 distinct items, at least 1 with qty > 1)
+            const count = Math.floor(Math.random() * 3) + 3;
+            const shuffle = [...itemPool].sort(() => 0.5 - Math.random());
+            selectedCombination = shuffle.slice(0, count);
+            const extraQty = Math.floor(Math.random() * 2) + 1; // 1 or 2 extra
+            targetSum = selectedCombination.reduce((acc, item) => acc + item.price, 0) + (selectedCombination[0].price * extraQty);
+        }
+
+        if (targetSum > 98 || targetSum < 10) {
+            generateNewQuestion();
+            return;
+        }
+
+        currentSolutionItems = selectedCombination;
+        currentTargetBudget = targetSum;
+        document.getElementById('target-budget-display').textContent = `Target: $${currentTargetBudget}`;
+
+        renderStoreGrid();
+    }
+
+    function renderStoreGrid() {
+        const grid = document.getElementById('store-items-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const solutionIds = new Set(currentSolutionItems.map(item => item.id));
+        const distractors = itemPool.filter(item => !solutionIds.has(item.id));
+        const shuffledDistractors = [...distractors].sort(() => 0.5 - Math.random());
+
+        const neededDistractorCount = Math.max(0, 12 - currentSolutionItems.length);
+        const shelfPool = [...currentSolutionItems, ...shuffledDistractors.slice(0, neededDistractorCount)];
+        const displayItems = shelfPool.sort(() => 0.5 - Math.random());
+
+        displayItems.forEach(item => {
+            const card = document.createElement('div');
+            card.className = "bg-slate-50 hover:bg-amber-50 border-2 border-slate-200 hover:border-amber-400 p-3 rounded-2xl flex flex-col items-center justify-between text-center transition-all cursor-pointer group shadow-sm hover:shadow-md relative overflow-hidden";
+            card.onclick = () => addToCart(item);
+
+            card.innerHTML = `
+                <div class="text-3xl mb-1 group-hover:scale-110 transition-transform">${item.icon}</div>
+                <div class="font-bold text-slate-800 text-xs sm:text-sm line-clamp-1">${item.name}</div>
+                <div class="text-amber-600 font-extrabold text-sm sm:text-base my-1">$${item.price}</div>
+                <button class="w-full bg-amber-400 group-hover:bg-amber-500 text-amber-950 text-xs font-bold py-1.5 px-2 rounded-xl transition-colors flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-plus text-[10px]"></i> Add
+                </button>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function addToCart(item) {
+        const existing = cart.find(c => c.id === item.id);
+        if (existing) {
+            if (currentLevel === 2) {
+                showFeedbackModal(false, "Level 2 Rule Violation", "In Level 2, you can only buy 1 quantity for each item!");
+                return;
+            }
+            existing.qty += 1;
+        } else {
+            cart.push({ ...item, qty: 1 });
+        }
+        updateCartUI();
+    }
+
+    function updateItemQty(id, delta) {
+        const item = cart.find(c => c.id === id);
+        if (!item) return;
+
+        if (delta > 0 && currentLevel === 2) {
+            showFeedbackModal(false, "Level 2 Rule Violation", "In Level 2, you can only buy 1 quantity for each item!");
+            return;
+        }
+
+        item.qty += delta;
+        if (item.qty <= 0) {
+            cart = cart.filter(c => c.id !== id);
+        }
+        updateCartUI();
+    }
+
+    function clearCart() {
+        cart = [];
+        const inputEl = document.getElementById('player-total-input');
+        if (inputEl) inputEl.value = '';
+        updateCartUI();
+    }
+
+    function updateCartUI() {
+        const cartList = document.getElementById('cart-items-list');
+        const countBadge = document.getElementById('cart-count-badge');
+        const pvBlocks = document.getElementById('place-value-blocks');
+        const pvMath = document.getElementById('place-value-math');
+
+        if (!cartList) return;
+
+        const totalItemsCount = cart.reduce((sum, item) => sum + item.qty, 0);
+        const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+        countBadge.textContent = `${totalItemsCount} ${totalItemsCount === 1 ? 'item' : 'items'}`;
+
+        if (cart.length === 0) {
+            cartList.innerHTML = `
+                <div class="text-center text-slate-400 py-8 text-sm">
+                    Your basket is empty.<br>Select items from the shelf!
+                </div>
+            `;
+        } else {
+            cartList.innerHTML = '';
+            cart.forEach(item => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between bg-slate-50 border border-slate-200 p-2.5 rounded-2xl gap-2";
+                row.innerHTML = `
+                    <div class="flex items-center gap-2 overflow-hidden">
+                        <span class="text-xl">${item.icon}</span>
+                        <div class="truncate">
+                            <div class="font-bold text-xs text-slate-800 truncate">${item.name}</div>
+                            <div class="text-[11px] text-amber-600 font-bold">$${item.price} ea</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl px-1.5 py-1 shadow-2xs">
+                        <button onclick="updateItemQty(${item.id}, -1)" class="w-5 h-5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center">
+                            -
+                        </button>
+                        <span class="font-bold text-xs px-1 text-slate-800">${item.qty}</span>
+                        <button onclick="updateItemQty(${item.id}, 1)" class="w-5 h-5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold flex items-center justify-center">
+                            +
+                        </button>
+                    </div>
+                `;
+                cartList.appendChild(row);
+            });
+        }
+
+        const tens = Math.floor(totalPrice / 10);
+        const ones = totalPrice % 10;
+
+        pvMath.textContent = `${tens} Tens ($${tens * 10}) + ${ones} Ones ($${ones})`;
+
+        pvBlocks.innerHTML = '';
+        if (totalPrice === 0) {
+            pvBlocks.innerHTML = `<span class="text-xs text-slate-400 italic">Add items to see $10 notes and $1 coins</span>`;
+        } else {
+            for (let t = 0; t < tens; t++) {
+                const note = document.createElement('div');
+                note.className = "bg-emerald-500 text-white font-black text-[10px] px-2 py-1 rounded-md shadow-xs flex items-center gap-1 border border-emerald-600";
+                note.innerHTML = `<i class="fa-solid fa-money-bill"></i> $10`;
+                pvBlocks.appendChild(note);
+            }
+            for (let o = 0; o < ones; o++) {
+                const coin = document.createElement('div');
+                coin.className = "bg-amber-400 text-amber-950 font-black text-[10px] w-6 h-6 rounded-full shadow-xs flex items-center justify-center border border-amber-500";
+                coin.textContent = "$1";
+                pvBlocks.appendChild(coin);
+            }
+        }
+    }
+
+    function checkAnswer() {
+        const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+        const totalItemsCount = cart.reduce((sum, item) => sum + item.qty, 0);
+
+        if (cart.length === 0) {
+            showFeedbackModal(false, "Basket Empty!", "Please select items from the shelf first.");
+            return;
+        }
+
+        const playerInputVal = document.getElementById('player-total-input').value.trim();
+        if (playerInputVal === "") {
+            showFeedbackModal(false, "Key In Total!", "Please type your calculated total in the 'Key in Basket Total' box before checking out!");
+            return;
+        }
+
+        const playerInputTotal = parseInt(playerInputVal, 10);
+        if (isNaN(playerInputTotal)) {
+            showFeedbackModal(false, "Invalid Number", "Please enter a valid number for your basket total!");
+            return;
+        }
+
+        if (playerInputTotal !== totalPrice) {
+            showFeedbackModal(false, "Calculation Check ❌", `You typed $${playerInputTotal}, but your basket items actually total $${totalPrice}. Use the $10 notes and $1 coins helper to recount!`);
+            return;
+        }
+
+        if (totalPrice !== currentTargetBudget) {
+            const diff = currentTargetBudget - totalPrice;
+            if (diff > 0) {
+                showFeedbackModal(false, "Incorrect Target Total", `Your basket total is $${totalPrice}. You need $${diff} more to reach the target of $${currentTargetBudget}!`);
+            } else {
+                showFeedbackModal(false, "Over Budget!", `Your basket total is $${totalPrice}, which exceeds the target budget of $${currentTargetBudget} by $${Math.abs(diff)}!`);
+            }
+            return;
+        }
+
+        if (currentLevel === 1) {
+            if (totalItemsCount !== 2) {
+                showFeedbackModal(false, "Level 1 Rule", `You must choose EXACTLY 2 items! You currently have ${totalItemsCount} items.`);
+                return;
+            }
+        }
+
+        if (currentLevel === 2) {
+            if (totalItemsCount < 3 || totalItemsCount > 5) {
+                showFeedbackModal(false, "Level 2 Rule", `You must choose between 3 and 5 items! You selected ${totalItemsCount}.`);
+                return;
+            }
+            const hasMultiQty = cart.some(item => item.qty > 1);
+            if (hasMultiQty) {
+                showFeedbackModal(false, "Level 2 Rule", `In Level 2, each item must have a quantity of 1.`);
+                return;
+            }
+        }
+
+        if (currentLevel === 3) {
+            const hasMultiQty = cart.some(item => item.qty > 1);
+            if (!hasMultiQty) {
+                showFeedbackModal(false, "Level 3 Rule Violation ⚠️", `At least 1 item in your basket must have a quantity greater than 1! Click the (+) button on an item in your basket.`);
+                return;
+            }
+        }
+
+        handleCorrectAnswer(`Awesome! You calculated and keyed in $${playerInputTotal} correctly for the target of $${currentTargetBudget}!`);
+    }
+
+    function handleCorrectAnswer(msg) {
+        confetti({
+            particleCount: 80,
+            spread: 60,
+            origin: { y: 0.6 }
+        });
+
+        addStamp();
+        showFeedbackModal(true, "Target Achieved! ⭐", msg);
+    }
+
+    function addStamp() {
+        if (stampsCount < 5) {
+            stampsCount++;
+            renderStamps();
+
+            if (stampsCount === 5) {
+                document.getElementById('wheel-btn').classList.remove('hidden');
+            }
+        }
+    }
+
+    function renderStamps() {
+        const container = document.getElementById('stamp-container');
+        if (!container) return;
+        container.innerHTML = '';
+        for (let i = 1; i <= 5; i++) {
+            const isStamped = i <= stampsCount;
+            const stamp = document.createElement('div');
+            stamp.className = `w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold text-xs transition-transform ${
+                isStamped ? 'bg-amber-400 border-amber-600 text-amber-950 scale-110 shadow-xs' : 'bg-white/60 border-amber-200 text-amber-300'
+            }`;
+            stamp.innerHTML = isStamped ? '⭐' : i;
+            container.appendChild(stamp);
+        }
+
+        if (stampsCount < 5) {
+            document.getElementById('wheel-btn').classList.add('hidden');
+        }
+    }
+
+    let isSpinning = false;
+    let startAngle = 0;
+
+    function drawWheel() {
+        const canvas = document.getElementById('wheel-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const numSegments = prizeCatalog.length;
+        const arc = (2 * Math.PI) / numSegments;
+        const radius = canvas.width / 2;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        prizeCatalog.forEach((prize, i) => {
+            const angle = startAngle + i * arc;
+            ctx.beginPath();
+            ctx.fillStyle = prize.color;
+            ctx.moveTo(radius, radius);
+            ctx.arc(radius, radius, radius - 4, angle, angle + arc);
+            ctx.lineTo(radius, radius);
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(radius, radius);
+            ctx.rotate(angle + arc / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 22px Fredoka";
+            ctx.fillText(prize.icon, radius - 20, 8);
+            ctx.restore();
+        });
+
+        ctx.beginPath();
+        ctx.arc(radius, radius, 20, 0, 2 * Math.PI);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.strokeStyle = '#fdcb6e';
+        ctx.lineWidth = 4;
+        ctx.stroke();
+    }
+
+    function spinWheel() {
+        if (isSpinning) return;
+        isSpinning = true;
+
+        const spinBtn = document.getElementById('spin-action-btn');
+        spinBtn.disabled = true;
+        spinBtn.classList.add('opacity-50');
+
+        const numSegments = prizeCatalog.length;
+        const winningIdx = Math.floor(Math.random() * numSegments);
+        const prize = prizeCatalog[winningIdx];
+
+        const degreesPerSegment = 360 / numSegments;
+        const totalRotations = 5; 
+        const stopAngleDegrees = (360 - (winningIdx * degreesPerSegment) - (degreesPerSegment / 2) - 90);
+        const finalDegrees = (totalRotations * 360) + stopAngleDegrees;
+
+        let currentDeg = (startAngle * 180 / Math.PI) % 360;
+        const duration = 4000;
+        const startTime = performance.now();
+
+        function animateSpin(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easeOut = 1 - Math.pow(1 - progress, 3);
+            const currentRotationDeg = currentDeg + (finalDegrees * easeOut);
+            
+            startAngle = (currentRotationDeg * Math.PI) / 180;
+            drawWheel();
+
+            if (progress < 1) {
+                requestAnimationFrame(animateSpin);
+            } else {
+                isSpinning = false;
+                spinBtn.disabled = false;
+                spinBtn.classList.remove('opacity-50');
+                closeWheelModal();
+                awardPrize(prize);
+            }
+        }
+
+        requestAnimationFrame(animateSpin);
+    }
+
+    function awardPrize(prize) {
+        confetti({
+            particleCount: 150,
+            spread: 100,
+            origin: { y: 0.5 }
+        });
+
+        collectedPrizes.push(prize);
+        updateGalleryUI();
+
+        stampsCount = 0;
+        renderStamps();
+
+        document.getElementById('prize-icon-large').textContent = prize.icon;
+        document.getElementById('prize-name-display').textContent = `You Won: ${prize.name}!`;
+        document.getElementById('prize-modal').classList.remove('hidden');
+    }
+
+    function updateGalleryUI() {
+        document.getElementById('prize-count-badge').textContent = `${collectedPrizes.length} Prizes`;
+        const grid = document.getElementById('gallery-grid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        if (collectedPrizes.length === 0) {
+            grid.innerHTML = `
+                <div class="col-span-3 text-center text-slate-400 py-8 text-xs">
+                    No prizes collected yet.<br>Complete 5 stamps to spin!
+                </div>
+            `;
+        } else {
+            collectedPrizes.forEach(p => {
+                const item = document.createElement('div');
+                item.className = "bg-amber-50 border border-amber-200 p-3 rounded-2xl flex flex-col items-center justify-center text-center shadow-2xs";
+                item.innerHTML = `
+                    <div class="text-3xl">${p.icon}</div>
+                    <div class="text-[11px] font-bold text-slate-700 mt-1">${p.name}</div>
+                `;
+                grid.appendChild(item);
+            });
+        }
+    }
+
+    function showFeedbackModal(isSuccess, title, msg) {
+        const modal = document.getElementById('feedback-modal');
+        const icon = document.getElementById('feedback-icon');
+        const titleEl = document.getElementById('feedback-title');
+        const msgEl = document.getElementById('feedback-message');
+        const btn = document.getElementById('feedback-btn');
+
+        icon.textContent = isSuccess ? '🎉' : '💡';
+        titleEl.textContent = title;
+        msgEl.textContent = msg;
+
+        if (isSuccess) {
+            btn.textContent = "Next Shopping Challenge";
+            btn.className = "w-full mt-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-2xl shadow-md transition-colors";
+            btn.onclick = () => {
+                closeFeedbackModal();
+                generateNewQuestion();
+            };
+        } else {
+            btn.textContent = "Try Again";
+            btn.className = "w-full mt-2 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-2xl shadow-md transition-colors";
+            btn.onclick = () => {
+                closeFeedbackModal();
+            };
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeFeedbackModal() {
+        document.getElementById('feedback-modal').classList.add('hidden');
+    }
+
+    function openWheelModal() {
+        if (stampsCount < 5) return;
+        document.getElementById('wheel-modal').classList.remove('hidden');
+        drawWheel();
+    }
+
+    function closeWheelModal() {
+        document.getElementById('wheel-modal').classList.add('hidden');
+    }
+
+    function closePrizeModal() {
+        document.getElementById('prize-modal').classList.add('hidden');
+        generateNewQuestion();
+    }
+
+    function openGalleryModal() {
+        document.getElementById('gallery-modal').classList.add('hidden') ? null : document.getElementById('gallery-modal').classList.remove('hidden');
+    }
+
+    function closeGalleryModal() {
+        document.getElementById('gallery-modal').classList.add('hidden');
+    }
+
+    window.onload = function() {
+        renderStamps();
+        switchLevel(1);
+        updateGalleryUI();
+    };
+    </script>
+</body>
+</html>
