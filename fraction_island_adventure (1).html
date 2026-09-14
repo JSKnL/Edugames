@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraction Island Adventure</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Fredoka', 'Quicksand', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .floating-delayed {
+            animation: float 3.5s ease-in-out 1.5s infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+        }
+
+        .wave-bg {
+            background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+        }
+
+        .jiggle:hover {
+            animation: jiggle 0.5s ease-in-out;
+        }
+
+        @keyframes jiggle {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.08) rotate(-3deg); }
+            75% { transform: scale(1.08) rotate(3deg); }
+        }
+
+        .pulse-slow {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(0.97); }
+        }
+
+        /* Canvas / SVG visual styles */
+        .fraction-pie {
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-amber-50 text-slate-800 min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- TOP NAVIGATION BAR -->
+    <header class="bg-teal-600 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="game.showScreen('main-menu')">
+                <div class="bg-amber-400 text-teal-900 font-extrabold text-2xl w-10 h-10 rounded-full flex items-center justify-center shadow">
+                    🏝️
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl leading-none tracking-wide text-amber-300">Fraction Island</h1>
+                    <span class="text-xs text-teal-100 font-medium">Math Adventure for Kids</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="bg-teal-700/80 px-3 py-1.5 rounded-full flex items-center gap-2 border border-teal-500 shadow-inner text-sm font-semibold">
+                    <span>⭐ Stars:</span>
+                    <span id="star-count" class="text-amber-300 font-bold text-base">0</span>
+                </div>
+                <button id="sound-toggle" onclick="audioEngine.toggleMute()" class="bg-teal-500 hover:bg-teal-400 text-white p-2 rounded-full transition shadow text-lg" title="Toggle Sound">
+                    🔊
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN MENU SCREEN -->
+    <main id="screen-main-menu" class="flex-1 max-w-4xl w-full mx-auto px-4 py-8 flex flex-col items-center justify-center">
+        <div class="text-center mb-8">
+            <span class="bg-amber-200 text-amber-900 text-sm font-bold px-4 py-1.5 rounded-full shadow-sm uppercase tracking-wider">Interactive Math Adventure</span>
+            <h2 class="text-4xl md:text-5xl font-black text-teal-800 mt-3 mb-2 drop-shadow-sm">The Fraction Family Rescue!</h2>
+            <p class="text-slate-600 max-w-lg mx-auto text-base md:text-lg">Help the Fraction Family rebuild their boat and cross the island river by solving fraction puzzles!</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+            <!-- LEVEL 1 CARD -->
+            <div onclick="game.startLevel(1)" class="jiggle bg-gradient-to-br from-sky-400 to-blue-600 text-white rounded-3xl p-6 shadow-xl border-4 border-sky-200 cursor-pointer transition transform hover:-translate-y-1 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 text-8xl opacity-20 group-hover:opacity-30 transition">⛵</div>
+                <div class="bg-sky-200 text-blue-900 font-bold text-xs px-3 py-1 rounded-full w-max mb-3 uppercase tracking-wider">Level 1</div>
+                <h3 class="text-2xl font-bold mb-2">Stormy Seas Rescue</h3>
+                <p class="text-sky-100 text-sm mb-4">A storm scattered the Fraction Family into the sea! Recombine them to form <strong>1 Whole</strong> raft.</p>
+                <div class="flex justify-between items-center text-xs font-semibold bg-sky-700/40 p-3 rounded-xl border border-sky-300/30">
+                    <span>Objective: Express 1 Whole</span>
+                    <span class="text-amber-300 font-bold text-sm">3 Rounds ★</span>
+                </div>
+                <button class="mt-5 w-full bg-amber-400 hover:bg-amber-300 text-amber-950 font-extrabold py-3 rounded-2xl shadow-md transition text-center flex items-center justify-center gap-2">
+                    <span>Play Level 1</span>
+                    <span>🌊</span>
+                </button>
+            </div>
+
+            <!-- LEVEL 2 CARD -->
+            <div onclick="game.startLevel(2)" class="jiggle bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-3xl p-6 shadow-xl border-4 border-emerald-200 cursor-pointer transition transform hover:-translate-y-1 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 text-8xl opacity-20 group-hover:opacity-30 transition">🪵</div>
+                <div class="bg-emerald-200 text-emerald-950 font-bold text-xs px-3 py-1 rounded-full w-max mb-3 uppercase tracking-wider">Level 2</div>
+                <h3 class="text-2xl font-bold mb-2">River Bridge Builder</h3>
+                <p class="text-emerald-100 text-sm mb-4">The family is stranded at the river! Add and subtract fraction logs to build a bridge across.</p>
+                <div class="flex justify-between items-center text-xs font-semibold bg-emerald-800/40 p-3 rounded-xl border border-emerald-300/30">
+                    <span>Objective: Add & Subtract Fractions</span>
+                    <span class="text-amber-300 font-bold text-sm">3 Rounds ★</span>
+                </div>
+                <button class="mt-5 w-full bg-amber-400 hover:bg-amber-300 text-amber-950 font-extrabold py-3 rounded-2xl shadow-md transition text-center flex items-center justify-center gap-2">
+                    <span>Play Level 2</span>
+                    <span>🌉</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- How to play helper -->
+        <div class="mt-10 bg-white/80 backdrop-blur rounded-2xl p-5 border border-amber-200 max-w-xl text-center shadow-sm">
+            <h4 class="font-bold text-teal-800 text-sm uppercase tracking-wider mb-1">💡 Teacher's Learning Tip</h4>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                When the <strong>top number (numerator)</strong> equals the <strong>bottom number (denominator)</strong>, you have <strong>1 Whole</strong>! (e.g., <sup>3</sup>/<sub>3</sub> = 1). When adding or subtracting fractions with the <em>same denominator</em>, keep the denominator the same and add or subtract the numerators!
+            </p>
+        </div>
+    </main>
+
+    <!-- LEVEL 1 GAMEPLAY SCREEN -->
+    <main id="screen-level-1" class="hidden flex-1 max-w-4xl w-full mx-auto px-4 py-4 flex flex-col justify-between">
+        <!-- Level Header -->
+        <div class="flex justify-between items-center bg-white/90 p-3 rounded-2xl shadow-sm border border-sky-100 mb-4">
+            <div class="flex items-center gap-2">
+                <button onclick="game.showScreen('main-menu')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-xl font-bold text-sm transition">
+                    ← Menu
+                </button>
+                <span class="font-bold text-sky-800 text-lg">Level 1: Stormy Seas</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm font-bold">
+                <span class="text-slate-500">Round:</span>
+                <span id="l1-round-indicator" class="bg-sky-600 text-white px-3 py-0.5 rounded-full text-sm">1 / 3</span>
+            </div>
+        </div>
+
+        <!-- Mascot Guidance Banner -->
+        <div class="bg-sky-100 border-2 border-sky-300 rounded-2xl p-4 mb-4 flex items-start gap-4 shadow-sm relative">
+            <div class="text-4xl bg-white p-2 rounded-2xl shadow-xs border border-sky-200">🦜</div>
+            <div class="flex-1">
+                <h4 class="font-bold text-sky-900 text-sm">Captain Fraction Says:</h4>
+                <p id="l1-instruction" class="text-sky-800 text-sm md:text-base font-medium mt-0.5">
+                    Help us rescue the floating fraction family! Click the fraction pieces in the sea to complete 1 Whole boat!
+                </p>
+            </div>
+        </div>
+
+        <!-- Main Interactive Water & Boat Area -->
+        <div class="relative wave-bg rounded-3xl p-6 min-h-[340px] flex flex-col justify-between shadow-inner border-4 border-sky-300 overflow-hidden">
+            <!-- Sea Waves Animated Graphics -->
+            <div class="absolute inset-0 opacity-10 pointer-events-none">
+                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <pattern id="wave" width="100" height="20" patternUnits="userSpaceOnUse">
+                        <path d="M 0 10 Q 25 20 50 10 T 100 10" fill="none" stroke="white" stroke-width="4"/>
+                    </pattern>
+                    <rect width="100%" height="100%" fill="url(#wave)" />
+                </svg>
+            </div>
+
+            <!-- Floating Fraction Candidates (Sea) -->
+            <div class="relative z-10">
+                <div class="text-xs font-extrabold text-sky-100 uppercase tracking-wider mb-2 flex items-center gap-1">
+                    <span>🌊 Floating Survivors (Click to Rescue):</span>
+                </div>
+                <div id="l1-swimmers-container" class="flex flex-wrap justify-center gap-4 min-h-[90px] items-center">
+                    <!-- Dynamic swimmer buttons generated here -->
+                </div>
+            </div>
+
+            <!-- Boat Hull (Raft Area) -->
+            <div class="relative z-10 mt-6 flex flex-col items-center">
+                <!-- Visual Boat Container -->
+                <div class="bg-amber-800 border-4 border-amber-950 rounded-b-full rounded-t-lg p-4 w-full max-w-md shadow-2xl flex flex-col items-center relative">
+                    <!-- Boat Flag / Mast -->
+                    <div class="absolute -top-12 left-1/2 transform -translate-x-1/2 flex flex-col items-center pointer-events-none">
+                        <div class="bg-rose-500 text-white font-extrabold text-xs px-2 py-0.5 rounded shadow">1 WHOLE</div>
+                        <div class="w-1.5 h-8 bg-amber-900"></div>
+                    </div>
+
+                    <div class="mt-3 text-amber-100 text-xs font-bold uppercase tracking-wider mb-2">
+                        Your Raft: <span id="l1-current-sum-text" class="text-amber-300 text-sm font-black">0</span>
+                    </div>
+
+                    <!-- Visual Fraction Pie / Bar Representation -->
+                    <div id="l1-boat-visual" class="w-36 h-36 relative flex items-center justify-center bg-amber-900/50 rounded-full border-4 border-amber-300/60 p-1">
+                        <!-- Dynamic SVG Pie Chart will render here -->
+                    </div>
+
+                    <!-- Collected Pieces Chips -->
+                    <div id="l1-raft-pieces" class="flex flex-wrap justify-center gap-2 mt-4 min-h-[36px] w-full">
+                        <!-- Chips of selected fractions appear here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Level Controls -->
+        <div class="flex justify-between items-center mt-4">
+            <button onclick="game.resetLevel1Round()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-4 py-2 rounded-xl text-sm transition">
+                🔄 Clear Raft
+            </button>
+            <button id="l1-submit-btn" onclick="game.checkLevel1Answer()" class="bg-emerald-500 hover:bg-emerald-400 text-white font-black px-6 py-2.5 rounded-xl shadow-lg transition text-base flex items-center gap-2">
+                <span>Set Sail!</span> ⛵
+            </button>
+        </div>
+    </main>
+
+    <!-- LEVEL 2 GAMEPLAY SCREEN -->
+    <main id="screen-level-2" class="hidden flex-1 max-w-4xl w-full mx-auto px-4 py-4 flex flex-col justify-between">
+        <!-- Level Header -->
+        <div class="flex justify-between items-center bg-white/90 p-3 rounded-2xl shadow-sm border border-emerald-100 mb-4">
+            <div class="flex items-center gap-2">
+                <button onclick="game.showScreen('main-menu')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-xl font-bold text-sm transition">
+                    ← Menu
+                </button>
+                <span class="font-bold text-emerald-800 text-lg">Level 2: River Bridge</span>
+            </div>
+            <div class="flex items-center gap-2 text-sm font-bold">
+                <span class="text-slate-500">Round:</span>
+                <span id="l2-round-indicator" class="bg-emerald-600 text-white px-3 py-0.5 rounded-full text-sm">1 / 3</span>
+            </div>
+        </div>
+
+        <!-- Mascot Guidance Banner -->
+        <div class="bg-emerald-100 border-2 border-emerald-300 rounded-2xl p-4 mb-4 flex items-start gap-4 shadow-sm">
+            <div class="text-4xl bg-white p-2 rounded-2xl shadow-xs border border-emerald-200">🦉</div>
+            <div class="flex-1">
+                <h4 class="font-bold text-emerald-900 text-sm">Professor Owl Says:</h4>
+                <p id="l2-instruction" class="text-emerald-800 text-sm md:text-base font-medium mt-0.5">
+                    Solve the fraction problem to collect planks! Accumulate enough planks to complete 1 Whole bridge across the river.
+                </p>
+            </div>
+        </div>
+
+        <!-- Equation & Math Canvas Container -->
+        <div class="bg-amber-100/90 border-4 border-amber-300 rounded-3xl p-6 shadow-md mb-4 flex flex-col items-center">
+            <div class="text-xs font-extrabold text-amber-800 uppercase tracking-wider mb-2">Bridge Equation Challenge</div>
+            
+            <!-- Mathematical Display -->
+            <div class="flex items-center justify-center gap-3 text-2xl md:text-3xl font-black text-slate-800 bg-white px-6 py-4 rounded-2xl shadow-sm border border-amber-200 my-2">
+                <!-- Dynamic Fraction Equation Rendered Here -->
+                <div id="l2-equation-display" class="flex items-center gap-3">
+                    <!-- e.g. 2/6 + 1/6 = ? -->
+                </div>
+            </div>
+
+            <!-- Visual Dynamic River & Log Bridge Visualizer -->
+            <div class="w-full max-w-lg mt-3 bg-gradient-to-b from-sky-400 to-sky-600 rounded-2xl border-4 border-amber-900/30 p-3 shadow-inner relative overflow-hidden">
+                <div class="flex items-center justify-between text-xs font-black text-white mb-2 px-1">
+                    <span class="uppercase tracking-wider drop-shadow flex items-center gap-1">🌉 River Bridge Construction View</span>
+                    <span id="l2-bridge-status-badge" class="bg-amber-400 text-amber-950 px-2 py-0.5 rounded-full font-extrabold">Bridge: 0/6 Built</span>
+                </div>
+                
+                <!-- SVG Bridge Illustration Viewport -->
+                <div id="l2-bridge-container" class="w-full h-44 relative bg-sky-500 rounded-xl overflow-hidden shadow-inner border-2 border-sky-300 flex items-center justify-center">
+                    <!-- Dynamic SVG Bridge Illustration rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- River & Logs Selection Area -->
+        <div class="bg-sky-500 rounded-3xl p-5 border-4 border-sky-600 shadow-inner flex flex-col gap-4">
+            <div class="text-xs font-extrabold text-sky-100 uppercase tracking-wider flex items-center justify-between">
+                <span>🪵 Available Fraction Logs:</span>
+                <span class="text-sky-200">Select the correct answer</span>
+            </div>
+
+            <!-- Log Options -->
+            <div id="l2-log-options" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <!-- Dynamic Log choices generated here -->
+            </div>
+        </div>
+
+        <!-- Level Controls -->
+        <div class="flex justify-end items-center mt-4">
+            <button id="l2-submit-btn" disabled onclick="game.checkLevel2Answer()" class="bg-slate-400 opacity-60 cursor-not-allowed text-white font-black px-6 py-2.5 rounded-xl shadow-lg transition text-base flex items-center gap-2">
+                <span>Build Bridge</span> 🔨
+            </button>
+        </div>
+    </main>
+
+    <!-- VICTORY / ROUND MODAL -->
+    <div id="modal-victory" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full text-center shadow-2xl border-4 border-amber-300 transform transition-all">
+            <div class="text-6xl mb-2 animate-bounce">🎉</div>
+            <h3 id="modal-title" class="text-3xl font-black text-teal-800">Awesome Job!</h3>
+            <p id="modal-subtitle" class="text-slate-600 text-sm mt-1 mb-4">You completed the fraction puzzle!</p>
+
+            <!-- Interactive Fraction Explanation Box -->
+            <div id="modal-math-explanation" class="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-left text-xs text-amber-900 mb-6 leading-relaxed">
+                <!-- Math detail generated here -->
+            </div>
+
+            <div class="flex justify-center gap-2 mb-6 text-3xl">
+                <span id="star-1">⭐</span>
+                <span id="star-2">⭐</span>
+                <span id="star-3">⭐</span>
+            </div>
+
+            <button id="modal-next-btn" onclick="game.nextRound()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-white font-black py-3 rounded-2xl shadow-lg transition text-lg flex items-center justify-center gap-2">
+                <span>Continue Adventure</span> ➔
+            </button>
+        </div>
+    </div>
+
+    <footer class="bg-teal-900 text-teal-300 text-xs py-3 text-center border-t border-teal-800">
+        <p>Fraction Island Adventure • Designed for Grade 3 Math Learners (Ages 8-9)</p>
+    </footer>
+
+    <script>
+        /**
+         * Simple Web Audio API Sound Generator for Sound FX without external files
+         */
+        class AudioEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                const btn = document.getElementById('sound-toggle');
+                btn.textContent = this.muted ? '🔇' : '🔊';
+            }
+
+            playPop() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            }
+
+            playSplash() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.25);
+                gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.25);
+            }
+
+            playSuccess() {
+                if (this.muted) return;
+                this.init();
+                const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + idx * 0.08 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + idx * 0.08);
+                    osc.stop(this.ctx.currentTime + idx * 0.08 + 0.25);
+                });
+            }
+
+            playError() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(110, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+        }
+
+        const audioEngine = new AudioEngine();
+    </script>
+
+    <script>
+        /**
+         * Main Game Controller
+         */
+        class FractionGame {
+            constructor() {
+                this.currentLevel = 1;
+                this.currentRound = 1;
+                this.totalStars = 0;
+                
+                // Level 1 state
+                this.level1Data = [
+                    { denominator: 4, swimmers: [ {num:1, den:4}, {num:2, den:4}, {num:1, den:4}, {num:3, den:4} ], targetNum: 4 },
+                    { denominator: 3, swimmers: [ {num:1, den:3}, {num:1, den:3}, {num:2, den:3}, {num:1, den:3} ], targetNum: 3 },
+                    { denominator: 6, swimmers: [ {num:2, den:6}, {num:3, den:6}, {num:1, den:6}, {num:4, den:6}, {num:2, den:6} ], targetNum: 6 }
+                ];
+                this.l1SelectedSwimmers = [];
+
+                // Level 2 state: Planks add up to 1 Whole (6/6)
+                this.level2Data = [
+                    { type: 'add', n1: 2, n2: 1, den: 6, options: [ {num:3, den:6}, {num:2, den:6}, {num:4, den:6}, {num:1, den:6} ] },
+                    { type: 'sub', n1: 4, n2: 2, den: 6, options: [ {num:1, den:6}, {num:2, den:6}, {num:3, den:6}, {num:5, den:6} ] },
+                    { type: 'sub', n1: 2, n2: 1, den: 6, options: [ {num:1, den:6}, {num:3, den:6}, {num:2, den:6}, {num:4, den:6} ] }
+                ];
+                this.l2AccumulatedPlanks = 0;
+                this.l2SelectedOption = null;
+            }
+
+            showScreen(screenId) {
+                document.querySelectorAll('main').forEach(el => el.classList.add('hidden'));
+                document.getElementById(`screen-${screenId}`).classList.remove('hidden');
+                audioEngine.playPop();
+            }
+
+            startLevel(lvl) {
+                this.currentLevel = lvl;
+                this.currentRound = 1;
+                if (lvl === 1) {
+                    this.setupLevel1Round();
+                    this.showScreen('level-1');
+                } else if (lvl === 2) {
+                    this.l2AccumulatedPlanks = 0; // Reset accumulated planks for level start
+                    this.setupLevel2Round();
+                    this.showScreen('level-2');
+                }
+            }
+
+            /* LEVEL 1 LOGIC */
+            setupLevel1Round() {
+                const data = this.level1Data[this.currentRound - 1];
+                this.l1SelectedSwimmers = [];
+                
+                document.getElementById('l1-round-indicator').textContent = `${this.currentRound} / ${this.level1Data.length}`;
+                document.getElementById('l1-instruction').textContent = 
+                    `The boat needs exactly 1 Whole (${data.denominator}/${data.denominator})! Click floating fraction swimmers to collect them.`;
+
+                this.renderLevel1Swimmers();
+                this.updateLevel1Raft();
+            }
+
+            renderLevel1Swimmers() {
+                const container = document.getElementById('l1-swimmers-container');
+                container.innerHTML = '';
+                const data = this.level1Data[this.currentRound - 1];
+
+                data.swimmers.forEach((swimmer, index) => {
+                    const isSelected = this.l1SelectedSwimmers.includes(index);
+                    if (isSelected) return; // Hide swimmers already in the raft
+
+                    const btn = document.createElement('button');
+                    btn.className = `floating ${index % 2 === 0 ? '' : 'floating-delayed'} bg-sky-100 hover:bg-amber-200 border-4 border-sky-300 text-sky-950 font-black rounded-2xl p-3 shadow-lg flex flex-col items-center justify-center transition transform hover:scale-110 active:scale-95 w-20 h-20`;
+                    btn.innerHTML = `
+                        <span class="text-xs text-sky-600 font-bold mb-0.5">🏊</span>
+                        <div class="flex flex-col items-center leading-none">
+                            <span class="border-b-2 border-sky-950 px-1 text-base">${swimmer.num}</span>
+                            <span class="text-base">${swimmer.den}</span>
+                        </div>
+                    `;
+                    btn.onclick = () => this.addSwimmerToRaft(index);
+                    container.appendChild(btn);
+                });
+            }
+
+            addSwimmerToRaft(index) {
+                audioEngine.playSplash();
+                this.l1SelectedSwimmers.push(index);
+                this.renderLevel1Swimmers();
+                this.updateLevel1Raft();
+            }
+
+            removeSwimmerFromRaft(arrayIdx) {
+                audioEngine.playPop();
+                this.l1SelectedSwimmers.splice(arrayIdx, 1);
+                this.renderLevel1Swimmers();
+                this.updateLevel1Raft();
+            }
+
+            resetLevel1Round() {
+                audioEngine.playPop();
+                this.l1SelectedSwimmers = [];
+                this.renderLevel1Swimmers();
+                this.updateLevel1Raft();
+            }
+
+            updateLevel1Raft() {
+                const data = this.level1Data[this.currentRound - 1];
+                const raftContainer = document.getElementById('l1-raft-pieces');
+                raftContainer.innerHTML = '';
+
+                let totalNum = 0;
+                this.l1SelectedSwimmers.forEach((swimmerIdx, arrayIdx) => {
+                    const item = data.swimmers[swimmerIdx];
+                    totalNum += item.num;
+
+                    const chip = document.createElement('button');
+                    chip.className = 'bg-amber-300 hover:bg-amber-400 text-amber-950 font-bold px-3 py-1.5 rounded-xl text-sm border-2 border-amber-500 flex items-center gap-1 shadow-sm transition animate-bounce';
+                    chip.innerHTML = `
+                        <span><sup>${item.num}</sup>/<sub>${item.den}</sub></span>
+                        <span class="text-xs text-rose-600">✕</span>
+                    `;
+                    chip.onclick = () => this.removeSwimmerFromRaft(arrayIdx);
+                    raftContainer.appendChild(chip);
+                });
+
+                // Update Sum Text
+                const sumText = document.getElementById('l1-current-sum-text');
+                sumText.textContent = `${totalNum} / ${data.denominator}`;
+                if (totalNum === data.denominator) {
+                    sumText.className = "text-emerald-300 text-lg font-black animate-pulse";
+                } else if (totalNum > data.denominator) {
+                    sumText.className = "text-rose-400 text-lg font-black";
+                } else {
+                    sumText.className = "text-amber-300 text-sm font-black";
+                }
+
+                // Render SVG Pie Visual
+                this.renderFractionPie(totalNum, data.denominator);
+            }
+
+            renderFractionPie(filledSegments, totalSegments) {
+                const visual = document.getElementById('l1-boat-visual');
+                visual.innerHTML = '';
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 100 100');
+                svg.setAttribute('class', 'w-full h-full transform -rotate-90');
+
+                const center = 50;
+                const radius = 45;
+                const anglePerSegment = (2 * Math.PI) / totalSegments;
+
+                for (let i = 0; i < totalSegments; i++) {
+                    const startAngle = i * anglePerSegment;
+                    const endAngle = (i + 1) * anglePerSegment;
+
+                    const x1 = center + radius * Math.cos(startAngle);
+                    const y1 = center + radius * Math.sin(startAngle);
+                    const x2 = center + radius * Math.cos(endAngle);
+                    const y2 = center + radius * Math.sin(endAngle);
+
+                    const largeArcFlag = anglePerSegment > Math.PI ? 1 : 0;
+                    const pathData = `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2} Z`;
+
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', pathData);
+                    path.setAttribute('stroke', '#78350f');
+                    path.setAttribute('stroke-width', '2');
+                    
+                    if (i < filledSegments) {
+                        path.setAttribute('fill', '#f59e0b'); // Amber filled slice
+                        path.setAttribute('class', 'fraction-pie');
+                    } else {
+                        path.setAttribute('fill', 'rgba(255, 255, 255, 0.2)'); // Empty slice
+                    }
+                    svg.appendChild(path);
+                }
+
+                visual.appendChild(svg);
+            }
+
+            checkLevel1Answer() {
+                const data = this.level1Data[this.currentRound - 1];
+                let currentSum = 0;
+                this.l1SelectedSwimmers.forEach(idx => {
+                    currentSum += data.swimmers[idx].num;
+                });
+
+                if (currentSum === data.targetNum) {
+                    audioEngine.playSuccess();
+                    this.showVictoryModal(
+                        "Raft Fully Restored!",
+                        `Great teamwork! ${data.targetNum}/${data.denominator} equals exactly 1 Whole raft. The boat can safely set sail!`,
+                        `Math Fact: When the top number (Numerator) equals the bottom number (Denominator), the fraction equals 1 Whole!`
+                    );
+                } else if (currentSum > data.targetNum) {
+                    audioEngine.playError();
+                    this.showToast("Too heavy! You have more than 1 whole. Click a piece to remove it.");
+                } else {
+                    audioEngine.playError();
+                    this.showToast("Not enough pieces! You need to make 1 Whole.");
+                }
+            }
+
+            /* LEVEL 2 LOGIC */
+            setupLevel2Round() {
+                const data = this.level2Data[this.currentRound - 1];
+                this.l2SelectedOption = null;
+
+                document.getElementById('l2-round-indicator').textContent = `${this.currentRound} / ${this.level2Data.length}`;
+                
+                // Render Math Equation
+                const eqDisplay = document.getElementById('l2-equation-display');
+                if (data.type === 'add') {
+                    document.getElementById('l2-instruction').textContent = 
+                        `Solve the addition problem (${data.n1}/${data.den} + ${data.n2}/${data.den}) to earn fraction log planks for the bridge!`;
+
+                    eqDisplay.innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <span class="border-b-2 border-slate-800 px-1">${data.n1}</span>
+                            <span>${data.den}</span>
+                        </div>
+                        <span class="text-emerald-600">+</span>
+                        <div class="flex flex-col items-center">
+                            <span class="border-b-2 border-slate-800 px-1">${data.n2}</span>
+                            <span>${data.den}</span>
+                        </div>
+                        <span class="text-slate-400">=</span>
+                        <div id="l2-answer-box" class="bg-amber-50 border-2 border-dashed border-amber-400 rounded-xl px-4 py-1 text-slate-400 font-bold">
+                            ?
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('l2-instruction').textContent = 
+                        `Solve the subtraction problem (${data.n1}/${data.den} - ${data.n2}/${data.den}) to earn fraction log planks for the bridge!`;
+
+                    eqDisplay.innerHTML = `
+                        <div class="flex flex-col items-center">
+                            <span class="border-b-2 border-slate-800 px-1">${data.n1}</span>
+                            <span>${data.den}</span>
+                        </div>
+                        <span class="text-rose-600">-</span>
+                        <div class="flex flex-col items-center">
+                            <span class="border-b-2 border-slate-800 px-1">${data.n2}</span>
+                            <span>${data.den}</span>
+                        </div>
+                        <span class="text-slate-400">=</span>
+                        <div id="l2-answer-box" class="bg-amber-50 border-2 border-dashed border-amber-400 rounded-xl px-4 py-1 text-slate-400 font-bold">
+                            ?
+                        </div>
+                    `;
+                }
+
+                this.renderLevel2BridgeGraphic(data);
+                this.renderLevel2Options(data);
+                this.updateLevel2SubmitButton();
+            }
+
+            renderLevel2BridgeGraphic(data, previewLog = null) {
+                const container = document.getElementById('l2-bridge-container');
+                container.innerHTML = '';
+
+                const accumulated = this.l2AccumulatedPlanks;
+                const totalSlots = data.den;
+                const previewNum = previewLog ? previewLog.num : 0;
+                const totalWithPreview = Math.min(accumulated + previewNum, totalSlots);
+
+                const badge = document.getElementById('l2-bridge-status-badge');
+                if (previewLog) {
+                    badge.textContent = `Bridge: ${accumulated}/${totalSlots} + ${previewLog.num}/${totalSlots} Plank Preview`;
+                    badge.className = "bg-amber-400 text-amber-950 px-2.5 py-0.5 rounded-full font-extrabold animate-pulse";
+                } else {
+                    badge.textContent = `Bridge Built: ${accumulated}/${totalSlots} Planks`;
+                    badge.className = "bg-emerald-400 text-emerald-950 px-2 py-0.5 rounded-full font-extrabold";
+                }
+
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('viewBox', '0 0 500 180');
+                svg.setAttribute('class', 'w-full h-full');
+
+                // 1. Water Background
+                const waterGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                waterGroup.innerHTML = `
+                    <rect width="500" height="180" fill="#0284c7" />
+                    <path d="M 0 50 Q 50 40 100 50 T 200 50 T 300 50 T 400 50 T 500 50" fill="none" stroke="#38bdf8" stroke-width="4" opacity="0.4"/>
+                    <path d="M 0 110 Q 50 120 100 110 T 200 110 T 300 110 T 400 110 T 500 110" fill="none" stroke="#0ea5e9" stroke-width="4" opacity="0.6"/>
+                    <path d="M 0 150 Q 60 140 120 150 T 240 150 T 360 150 T 480 150" fill="none" stroke="#bae6fd" stroke-width="3" opacity="0.3"/>
+                `;
+                svg.appendChild(waterGroup);
+
+                // 2. River Banks
+                const banksGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                banksGroup.innerHTML = `
+                    <!-- Left Bank -->
+                    <path d="M 0 0 L 90 0 C 100 60, 95 120, 85 180 L 0 180 Z" fill="#22c55e" />
+                    <path d="M 0 0 L 80 0 C 90 60, 85 120, 75 180 L 0 180 Z" fill="#16a34a" />
+                    <circle cx="30" cy="40" r="22" fill="#15803d" />
+                    <circle cx="45" cy="140" r="25" fill="#15803d" />
+
+                    <!-- Right Bank -->
+                    <path d="M 500 0 L 410 0 C 400 60, 405 120, 415 180 L 500 180 Z" fill="#22c55e" />
+                    <path d="M 500 0 L 420 0 C 410 60, 415 120, 425 180 L 500 180 Z" fill="#16a34a" />
+                    <circle cx="465" cy="50" r="24" fill="#15803d" />
+                    <text x="455" y="110" font-size="28">🏝️</text>
+                    <text x="465" y="135" font-size="10" font-weight="bold" fill="#ffffff" text-anchor="middle">Goal</text>
+                `;
+                svg.appendChild(banksGroup);
+
+                // 3. Bridge Ropes
+                const ropeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                ropeGroup.innerHTML = `
+                    <path d="M 80 55 Q 250 75 420 55" fill="none" stroke="#78350f" stroke-width="5" stroke-dasharray="8,4" />
+                    <path d="M 80 125 Q 250 145 420 125" fill="none" stroke="#78350f" stroke-width="5" stroke-dasharray="8,4" />
+                `;
+                svg.appendChild(ropeGroup);
+
+                // 4. Dynamic Planks (Accumulated + Preview + Empty)
+                const bridgePlanksGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                const startX = 85;
+                const endX = 415;
+                const totalSpan = endX - startX;
+                const slotWidth = totalSpan / totalSlots;
+
+                for (let i = 0; i < totalSlots; i++) {
+                    const px = startX + (i * slotWidth) + 3;
+                    const pw = slotWidth - 6;
+                    
+                    const sagFactor = Math.sin((i + 0.5) / totalSlots * Math.PI) * 15;
+                    const py = 50 + sagFactor;
+                    const ph = 80;
+
+                    const isAccumulated = i < accumulated;
+                    const isPreview = !isAccumulated && i < totalWithPreview;
+
+                    const plank = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+                    if (isAccumulated) {
+                        // Already built & locked-in plank
+                        plank.innerHTML = `
+                            <rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="6" fill="#854d0e" stroke="#451a03" stroke-width="3" />
+                            <line x1="${px + 4}" y1="${py + 10}" x2="${px + pw - 4}" y2="${py + 10}" stroke="#a16207" stroke-width="2" />
+                            <line x1="${px + 4}" y1="${py + ph - 10}" x2="${px + pw - 4}" y2="${py + ph - 10}" stroke="#a16207" stroke-width="2" />
+                            <rect x="${px + (pw/2) - 13}" y="${py + (ph/2) - 12}" width="26" height="24" rx="4" fill="#d97706" stroke="#78350f" stroke-width="1.5" />
+                            <text x="${px + (pw/2)}" y="${py + (ph/2) + 4}" font-size="11" font-weight="black" fill="#ffffff" text-anchor="middle">✓ 1/${totalSlots}</text>
+                        `;
+                    } else if (isPreview) {
+                        // Newly selected option preview plank
+                        plank.innerHTML = `
+                            <rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="6" fill="#f59e0b" stroke="#b45309" stroke-width="3" class="animate-pulse" />
+                            <rect x="${px + (pw/2) - 13}" y="${py + (ph/2) - 12}" width="26" height="24" rx="4" fill="#fef3c7" stroke="#b45309" stroke-width="1.5" />
+                            <text x="${px + (pw/2)}" y="${py + (ph/2) + 4}" font-size="11" font-weight="black" fill="#78350f" text-anchor="middle">+ 1/${totalSlots}</text>
+                        `;
+                    } else {
+                        // Empty slot
+                        plank.innerHTML = `
+                            <rect x="${px}" y="${py}" width="${pw}" height="${ph}" rx="6" fill="rgba(254, 243, 199, 0.2)" stroke="#fef3c7" stroke-width="2" stroke-dasharray="4,4" />
+                            <text x="${px + (pw/2)}" y="${py + (ph/2) + 4}" font-size="10" font-weight="bold" fill="#ffffff" opacity="0.7" text-anchor="middle">1/${totalSlots}</text>
+                        `;
+                    }
+                    bridgePlanksGroup.appendChild(plank);
+                }
+
+                svg.appendChild(bridgePlanksGroup);
+
+                // 5. Dynamic Character Position (Advances as bridge is built)
+                const charRatio = totalWithPreview / totalSlots;
+                const charX = startX - 25 + (charRatio * (totalSpan - 10));
+                const charY = 70 + Math.sin(Math.max(0, charRatio) * Math.PI) * 12;
+
+                const charGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                charGroup.innerHTML = `
+                    <g transform="translate(${charX}, ${charY})">
+                        <circle cx="15" cy="15" r="18" fill="#ffffff" stroke="#047857" stroke-width="2" />
+                        <text x="5" y="24" font-size="22">🦉</text>
+                    </g>
+                `;
+                svg.appendChild(charGroup);
+
+                container.appendChild(svg);
+            }
+
+            renderLevel2Options(data) {
+                const container = document.getElementById('l2-log-options');
+                container.innerHTML = '';
+
+                data.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.className = 'l2-log-btn bg-amber-200 hover:bg-amber-300 border-4 border-amber-700 text-amber-950 font-black rounded-2xl p-3 shadow-md flex flex-col items-center justify-center transition transform hover:scale-105 active:scale-95 cursor-pointer';
+                    btn.innerHTML = `
+                        <span class="text-xs text-amber-800 font-bold mb-0.5">🪵 Log Plank</span>
+                        <div class="flex flex-col items-center leading-none text-amber-950">
+                            <span class="border-b-2 border-amber-950 px-1 text-lg font-black">${opt.num}</span>
+                            <span class="text-lg font-black">${opt.den}</span>
+                        </div>
+                    `;
+                    btn.onclick = () => this.selectLevel2Option(opt, btn);
+                    container.appendChild(btn);
+                });
+            }
+
+            selectLevel2Option(option, buttonEl) {
+                audioEngine.playPop();
+                this.l2SelectedOption = option;
+
+                document.querySelectorAll('.l2-log-btn').forEach(b => {
+                    b.classList.remove('bg-emerald-300', 'border-emerald-600', 'ring-4', 'ring-emerald-200');
+                    b.classList.add('bg-amber-200', 'border-amber-700');
+                });
+                buttonEl.classList.remove('bg-amber-200', 'border-amber-700');
+                buttonEl.classList.add('bg-emerald-300', 'border-emerald-600', 'ring-4', 'ring-emerald-200');
+
+                const box = document.getElementById('l2-answer-box');
+                box.className = "bg-emerald-100 border-2 border-emerald-500 rounded-xl px-4 py-1 text-emerald-900 font-black";
+                box.innerHTML = `
+                    <div class="flex flex-col items-center text-xl leading-none">
+                        <span class="border-b-2 border-emerald-950 px-1">${option.num}</span>
+                        <span>${option.den}</span>
+                    </div>
+                `;
+
+                const data = this.level2Data[this.currentRound - 1];
+                this.renderLevel2BridgeGraphic(data, option);
+                this.updateLevel2SubmitButton();
+            }
+
+            updateLevel2SubmitButton() {
+                const btn = document.getElementById('l2-submit-btn');
+                if (this.l2SelectedOption) {
+                    btn.disabled = false;
+                    btn.className = "bg-emerald-500 hover:bg-emerald-400 text-white font-black px-6 py-2.5 rounded-xl shadow-lg transition text-base flex items-center gap-2 cursor-pointer";
+                } else {
+                    btn.disabled = true;
+                    btn.className = "bg-slate-400 opacity-60 cursor-not-allowed text-white font-black px-6 py-2.5 rounded-xl shadow-lg transition text-base flex items-center gap-2";
+                }
+            }
+
+            checkLevel2Answer() {
+                if (!this.l2SelectedOption) return;
+
+                const data = this.level2Data[this.currentRound - 1];
+                const expectedNum = data.type === 'add' ? data.n1 + data.n2 : data.n1 - data.n2;
+
+                if (this.l2SelectedOption.num === expectedNum && this.l2SelectedOption.den === data.den) {
+                    audioEngine.playSuccess();
+                    
+                    // Accumulate planks earned
+                    const earnedPlanks = expectedNum;
+                    this.l2AccumulatedPlanks += earnedPlanks;
+
+                    const opSymbol = data.type === 'add' ? '+' : '-';
+
+                    if (this.l2AccumulatedPlanks >= data.den) {
+                        // Full Bridge Completed!
+                        this.showVictoryModal(
+                            "🎉 Bridge 100% Completed!",
+                            `Incredible math work! You solved ${data.n1}/${data.den} ${opSymbol} ${data.n2}/${data.den} = ${expectedNum}/${data.den} and placed the final planks!`,
+                            `Math Summary: By adding all the earned planks together (${this.l2AccumulatedPlanks}/${data.den}), you formed 1 Whole bridge! The Fraction Family can cross the river safely!`
+                        );
+                    } else {
+                        // Partial accumulation modal
+                        this.showVictoryModal(
+                            `+${earnedPlanks} Plank${earnedPlanks > 1 ? 's' : ''} Placed!`,
+                            `Correct! ${data.n1}/${data.den} ${opSymbol} ${data.n2}/${data.den} = ${expectedNum}/${data.den}. You accumulated +${earnedPlanks}/${data.den} on the bridge!`,
+                            `Bridge Progress: ${this.l2AccumulatedPlanks}/${data.den} built so far! Solve the next equation to get ${data.den - this.l2AccumulatedPlanks}/${data.den} more planks and finish 1 Whole bridge!`
+                        );
+                    }
+                } else {
+                    audioEngine.playError();
+                    this.showToast("That fraction log doesn't match the answer! Check your numerator calculation.");
+                }
+            }
+
+            /* MODAL & UI HELPERS */
+            showVictoryModal(title, subtitle, mathExplanation) {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-subtitle').textContent = subtitle;
+                document.getElementById('modal-math-explanation').textContent = mathExplanation;
+
+                const modal = document.getElementById('modal-victory');
+                modal.classList.remove('hidden');
+
+                this.totalStars += 1;
+                document.getElementById('star-count').textContent = this.totalStars;
+            }
+
+            nextRound() {
+                audioEngine.playPop();
+                document.getElementById('modal-victory').classList.add('hidden');
+
+                if (this.currentLevel === 1) {
+                    if (this.currentRound < this.level1Data.length) {
+                        this.currentRound++;
+                        this.setupLevel1Round();
+                    } else {
+                        // Level 1 Complete -> Offer Level 2
+                        this.showScreen('main-menu');
+                        this.showToast("🌟 Level 1 Complete! You unlocked Level 2!");
+                    }
+                } else if (this.currentLevel === 2) {
+                    if (this.currentRound < this.level2Data.length) {
+                        this.currentRound++;
+                        this.setupLevel2Round();
+                    } else {
+                        // All Complete!
+                        this.showScreen('main-menu');
+                        this.showToast("🎉 Congratulations! You completed all Fraction Island Adventures!");
+                    }
+                }
+            }
+
+            showToast(message) {
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl z-50 text-sm font-bold border-2 border-amber-300 animate-bounce';
+                toast.textContent = message;
+                document.body.appendChild(toast);
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
+            }
+        }
+
+        // Initialize Game Instance
+        const game = new FractionGame();
+    </script>
+</body>
+</html>
