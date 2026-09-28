@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Nets Explorer - Elementary Math & Spatial Reasoning</title>
+    <!-- Tailwind CSS for modern responsive layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D hierarchical hinge folding animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Font Awesome for crisp icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #f1f5f9;
+            user-select: none;
+        }
+        .font-display {
+            font-family: 'Fredoka One', cursive;
+        }
+        
+        /* Draggable palette item styling */
+        .palette-card {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: grab;
+        }
+        .palette-card:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .palette-card:active {
+            cursor: grabbing;
+            transform: scale(0.97);
+        }
+
+        /* Snap edge targets on workspace */
+        .edge-snap-slot {
+            transition: all 0.15s ease-in-out;
+            animation: pulse-edge 1.8s infinite;
+        }
+        .edge-snap-slot:hover {
+            transform: scale(1.25);
+            background-color: #f59e0b !important;
+            border-color: #b45309 !important;
+            z-index: 30;
+        }
+
+        @keyframes pulse-edge {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.5); }
+            50% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(99, 102, 241, 0); }
+        }
+
+        @keyframes bounce-subtle {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-4px); }
+        }
+        .animate-bounce-subtle {
+            animation: bounce-subtle 1.5s infinite;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <header class="bg-indigo-600 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap justify-between items-center gap-2">
+            
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-400 text-indigo-950 p-2.5 rounded-2xl shadow-md font-black text-2xl flex items-center justify-center">
+                    <i class="fa-solid fa-cube"></i>
+                </div>
+                <div>
+                    <h1 class="font-display text-xl sm:text-2xl tracking-wide flex items-center gap-2">
+                        Cube Nets Explorer
+                        <span class="text-[10px] bg-indigo-800 text-amber-300 font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">SLS Interactive</span>
+                    </h1>
+                    <p class="text-xs text-indigo-200 hidden sm:block">Primary Math • 11 Canonical Cube Nets Explorer</p>
+                </div>
+            </div>
+
+            <!-- Cube Net Status Indicator -->
+            <div class="flex items-center gap-2 bg-indigo-700/60 px-3 py-1.5 rounded-2xl">
+                <button onclick="openNetsModal()" class="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-indigo-950 font-black rounded-xl text-xs transition flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-shapes"></i> Show 11 Ways to Create a Cube
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto w-full p-2 sm:p-4 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+        <!-- Left Column: Side Tray & Freeform 2D Net Canvas (7 Columns) -->
+        <section class="lg:col-span-7 flex flex-col gap-3">
+            
+            <!-- CAIT Thinking Prompt Banner -->
+            <div class="bg-gradient-to-r from-indigo-50 via-blue-50 to-amber-50 border-2 border-indigo-200 rounded-2xl p-3.5 shadow-sm">
+                <div class="flex items-start gap-3">
+                    <div class="bg-indigo-600 text-amber-300 p-2.5 rounded-xl shadow-md text-xl flex-shrink-0">
+                        <i class="fa-solid fa-brain"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-md">
+                                CAIT Spatial Reasoning Challenge
+                            </span>
+                            <button onclick="toggleQuizMode()" id="btn-quiz-toggle" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 underline flex items-center gap-1">
+                                <i class="fa-solid fa-circle-question"></i> <span id="quiz-toggle-text">Switch to Folding Prediction Quiz</span>
+                            </button>
+                        </div>
+                        <p id="cait-prompt-text" class="text-xs sm:text-sm font-extrabold text-slate-800 mt-1 leading-snug">
+                            A cube consists of 6 identical square faces. Drag squares from the side tray onto open edge slots to build a net and test if it folds into a closed 3D cube!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workspace Panel (Side Tray + Assembly Stage) -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 flex flex-col flex-1">
+                
+                <!-- Action Header Bar -->
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+                    <div>
+                        <h2 id="builder-heading" class="font-display text-base sm:text-lg text-slate-800">2D Net Edge Builder</h2>
+                        <p class="text-xs text-slate-500">Drag or click square faces onto open <i class="fa-solid fa-plus text-indigo-600 font-bold"></i> edge slots.</p>
+                    </div>
+                    
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button onclick="rotateEntireNet()" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-extrabold rounded-xl text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-right"></i> Rotate Figure
+                        </button>
+                        <button onclick="clearCurrentNet()" class="px-2.5 py-1.5 bg-slate-100 hover:bg-rose-100 hover:text-rose-700 text-slate-600 font-extrabold rounded-xl text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-eraser"></i> Clear
+                        </button>
+                        <button onclick="loadSampleNet()" class="px-2.5 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 font-extrabold rounded-xl text-xs transition flex items-center gap-1">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Sample
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2D Assembly Canvas Grid -->
+                <div class="grid grid-cols-12 gap-3 flex-1 min-h-[320px]">
+                    
+                    <!-- Side Tray / Palette (3 Cols) -->
+                    <div class="col-span-4 sm:col-span-3 bg-slate-50 rounded-2xl border border-slate-200 p-2.5 flex flex-col justify-between">
+                        <div>
+                            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">Face Palette</span>
+                            <div id="side-palette-container" class="flex flex-col gap-2">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+                        <div class="text-[10px] font-bold text-slate-400 text-center mt-2 bg-white p-2 rounded-xl border border-slate-100">
+                            Attached: <span id="face-count-badge" class="font-black text-indigo-600 text-sm">1</span> / 6
+                        </div>
+                    </div>
+
+                    <!-- Interactive 2D Stage Canvas (9 Cols) -->
+                    <div class="col-span-8 sm:col-span-9 bg-slate-900/5 rounded-2xl border-2 border-dashed border-slate-300 p-3 relative overflow-auto flex items-center justify-center min-h-[300px]" id="stage-viewport">
+                        <div id="stage-grid-container" class="relative transition-all duration-300" style="width: 380px; height: 380px;">
+                            <!-- 2D net nodes and edge snap targets rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confirm Net Creation Action Bar -->
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 bg-indigo-50 border border-indigo-100 p-2.5 rounded-xl">
+                    <div class="flex items-center gap-2">
+                        <span id="face-status-pill" class="px-2.5 py-1 bg-indigo-600 text-white rounded-lg text-xs font-black">
+                            1 / 6 Faces Attached
+                        </span>
+                        <span class="text-xs font-bold text-indigo-900 hidden sm:inline">Attach 6 squares then confirm!</span>
+                    </div>
+
+                    <button onclick="confirmNetCreation()" id="btn-confirm-net" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black rounded-xl text-xs shadow-md transition transform active:scale-95 flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check text-sm"></i> Confirm Net Creation
+                    </button>
+                </div>
+
+                <!-- Teacher Feedback / Spatial Reasoning Box -->
+                <div id="feedback-card" class="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-extrabold text-slate-700 flex items-center justify-between min-h-[50px]">
+                    <div class="flex items-center gap-2.5">
+                        <i id="feedback-icon" class="fa-solid fa-circle-info text-indigo-500 text-xl flex-shrink-0"></i>
+                        <span id="feedback-text">Drag or click square faces onto open edge slots (+), then click "Confirm Net Creation"!</span>
+                    </div>
+                </div>
+
+                <!-- Quiz Challenge Options Box -->
+                <div id="quiz-options-box" class="hidden mt-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <p class="text-xs font-black text-amber-900 mb-2">Predict: Will this 2D net successfully fold into a complete 3D Cube without overlapping faces?</p>
+                    <div class="grid grid-cols-2 gap-2" id="quiz-buttons-grid">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- Right Column: 3D Interactive Folding Studio (5 Columns) -->
+        <section class="lg:col-span-5 flex flex-col gap-3">
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3.5 flex flex-col h-full justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="font-display text-base sm:text-lg text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-cube text-indigo-600"></i> 3D Folding Studio
+                        </h2>
+                        <span class="text-[10px] font-black uppercase text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">
+                            Three.js Engine
+                        </span>
+                    </div>
+
+                    <!-- 3D Canvas Container -->
+                    <div id="three-canvas-container" class="w-full h-[280px] sm:h-[320px] bg-slate-900 rounded-2xl relative overflow-hidden shadow-inner">
+                        <div class="absolute top-2.5 left-2.5 z-10 bg-slate-900/80 backdrop-blur-md px-2.5 py-1 rounded-xl border border-slate-700/60 text-[10px] font-black text-slate-300 flex items-center gap-1.5">
+                            <i class="fa-solid fa-hand-pointer text-amber-400"></i> Drag to rotate 3D view
+                        </div>
+
+                        <!-- Solid Cube Unlocked Banner overlay -->
+                        <div id="solid-cube-badge" class="hidden absolute bottom-3 left-3 z-10 bg-emerald-500/90 text-white font-black text-xs px-3 py-1.5 rounded-xl shadow-lg flex items-center gap-1.5 backdrop-blur-sm animate-bounce-subtle">
+                            <i class="fa-solid fa-trophy text-amber-300 text-sm"></i> Solid 3D Cube Formed!
+                        </div>
+                    </div>
+
+                    <!-- 3D Folding Controls -->
+                    <div class="mt-3.5 bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                        <div class="flex justify-between items-center mb-1">
+                            <label for="fold-slider" class="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                                <i class="fa-solid fa-sliders text-indigo-600"></i> Fold / Unfold Hinge Progress
+                            </label>
+                            <span id="fold-percentage-label" class="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">0% (Flat Net)</span>
+                        </div>
+
+                        <div class="flex items-center gap-2 mt-2">
+                            <button onclick="animateFoldTo(0)" class="px-2.5 py-1.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-extrabold transition">
+                                Flat
+                            </button>
+                            <input type="range" id="fold-slider" min="0" max="100" value="0" oninput="onFoldSliderChange(this.value)" class="w-full accent-indigo-600 cursor-pointer">
+                            <button onclick="animateFoldTo(100)" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-extrabold transition">
+                                Fold
+                            </button>
+                            <button onclick="toggleAutoPlayFold()" id="btn-autofold" class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-300 text-indigo-950 font-black rounded-xl text-xs transition shadow flex items-center justify-center">
+                                <i class="fa-solid fa-play"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 11 Canonical Cube Nets Trigger Card -->
+                <div class="mt-3 bg-gradient-to-r from-indigo-600 to-indigo-800 text-white rounded-2xl p-3.5 shadow-md flex items-center justify-between">
+                    <div>
+                        <h4 class="font-display text-sm text-amber-300">The 11 Cube Net Patterns</h4>
+                        <p class="text-[11px] text-indigo-200">Explore all 11 standard layouts that form a cube.</p>
+                    </div>
+                    <button onclick="openNetsModal()" class="px-3 py-2 bg-amber-400 hover:bg-amber-300 text-indigo-950 font-black text-xs rounded-xl transition shadow flex items-center gap-1 flex-shrink-0">
+                        <i class="fa-solid fa-border-all"></i> View All 11
+                    </button>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Modal Dialog: 11 Canonical Cube Nets Showcase -->
+    <div id="nets-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm hidden flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-slate-200 flex flex-col max-h-[90vh] overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="bg-indigo-600 px-5 py-4 text-white flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-shapes text-amber-400 text-xl"></i>
+                    <div>
+                        <h3 class="font-display text-lg tracking-wide">11 Ways to Create a Cube</h3>
+                        <p class="text-xs text-indigo-200">Select any net pattern below to load it directly onto your stage and test folding!</p>
+                    </div>
+                </div>
+                <button onclick="closeNetsModal()" class="w-8 h-8 rounded-full bg-indigo-700 hover:bg-rose-500 text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Modal Body: 11 Nets Grid -->
+            <div id="modal-nets-grid" class="p-4 sm:p-6 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 bg-slate-50">
+                <!-- JS dynamically populates mini-preview cards for all 11 canonical nets -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="bg-white px-5 py-3 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
+                <span>Categorized into 1-4-1, 2-3-1, 2-2-2 Staircase & 3-3 Nets</span>
+                <button onclick="closeNetsModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-xl transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-2.5 px-4 text-center text-xs text-slate-500 flex flex-wrap justify-between items-center max-w-7xl mx-auto w-full gap-2">
+        <div class="flex items-center gap-2 font-extrabold text-slate-600">
+            <span class="text-indigo-600 font-display text-sm">MOE SLS Math Interactive</span>
+            <span>• CAIT Skills & Spatial Geometry</span>
+        </div>
+        <div class="text-[11px] text-slate-400">
+            Single-File HTML • Fully Responsive & Offline Ready
+        </div>
+    </footer>
+
+    <!-- Application JavaScript Code -->
+    <script>
+        /* ====================================================================
+           1. SYNTHESIZED AUDIO SFX ENGINE (Web Audio API)
+           ==================================================================== */
+        const AudioFX = {
+            ctx: null,
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+            },
+            playPop() {
+                this.init();
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(750, this.ctx.currentTime + 0.04);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.04);
+            },
+            playSuccess() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                    gain.gain.setValueAtTime(0.2, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.3);
+                });
+            },
+            playError() {
+                this.init();
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(190, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.2);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.25);
+            }
+        };
+
+        /* ====================================================================
+           2. GAME DATA STRUCTURES & CONFIGURATION (CUBE ONLY)
+           ==================================================================== */
+        let isQuizMode = false;
+
+        // Net assembly graph node tree
+        let netNodesList = []; 
+        let autoFoldTimer = null;
+        let foldDirectionForward = true;
+
+        // 11 Canonical Cube Net Signatures & Metadata
+        const CANONICAL_CUBE_NETS = [
+            { sig: "0,1|1,0|1,1|1,2|1,3|2,1", name: "1-4-1 Net (Standard T-Shape)", type: "1-4-1 Class" },
+            { sig: "0,1|1,0|1,1|1,2|1,3|2,2", name: "1-4-1 Net (Offset Position 2)", type: "1-4-1 Class" },
+            { sig: "0,1|1,0|1,1|1,2|1,3|2,3", name: "1-4-1 Net (Offset Position 3)", type: "1-4-1 Class" },
+            { sig: "0,2|1,0|1,1|1,2|1,3|2,1", name: "1-4-1 Net (Top Right Shift)", type: "1-4-1 Class" },
+            { sig: "0,2|1,0|1,1|1,2|1,3|2,2", name: "1-4-1 Net (Symmetric Corners)", type: "1-4-1 Class" },
+            { sig: "0,1|1,0|1,1|1,2|1,3|2,0", name: "1-4-1 Net (Corner Hook)", type: "1-4-1 Class" },
+            { sig: "0,0|0,1|1,1|1,2|1,3|2,1", name: "2-3-1 Net (Z-Shift Pattern)", type: "2-3-1 Class" },
+            { sig: "0,0|0,1|1,1|1,2|1,3|2,2", name: "2-3-1 Net (Double Tab)", type: "2-3-1 Class" },
+            { sig: "0,1|0,2|1,0|1,1|1,2|2,1", name: "2-3-1 Net (Asymmetric)", type: "2-3-1 Class" },
+            { sig: "0,0|0,1|1,1|1,2|2,2|2,3", name: "2-2-2 Staircase Net", type: "Staircase Class" },
+            { sig: "0,0|0,1|0,2|1,2|1,3|1,4", name: "3-3 Long Parallel Net", type: "3-3 Class" }
+        ];
+
+        // Sample initial net layout
+        const SAMPLE_CUBE_NET = [
+            { id: 'n1', shapeId: 'SQ', parentId: null, attachEdge: null, gx: 0, gy: 0 },
+            { id: 'n2', shapeId: 'SQ', parentId: 'n1', attachEdge: 'W', gx: -1, gy: 0 },
+            { id: 'n3', shapeId: 'SQ', parentId: 'n1', attachEdge: 'E', gx: 1, gy: 0 },
+            { id: 'n4', shapeId: 'SQ', parentId: 'n3', attachEdge: 'E', gx: 2, gy: 0 },
+            { id: 'n5', shapeId: 'SQ', parentId: 'n1', attachEdge: 'N', gx: 0, gy: -1 },
+            { id: 'n6', shapeId: 'SQ', parentId: 'n1', attachEdge: 'S', gx: 0, gy: 1 }
+        ];
+
+        /* ====================================================================
+           3. THREE.JS 3D SCENE & HINGE FOLDING ENGINE
+           ==================================================================== */
+        let scene, camera, renderer;
+        let mainHingeGroup, solidCubeMesh;
+        let nodeMeshMap = new Map();
+
+        // Mouse drag orbit controls variables
+        let isDraggingMouse = false;
+        let previousMousePosition = { x: 0, y: 0 };
+
+        function initThreeJS() {
+            const container = document.getElementById('three-canvas-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a); // Slate-900
+
+            // Camera setup
+            const aspect = container.clientWidth / container.clientHeight;
+            camera = new THREE.PerspectiveCamera(45, aspect, 0.1, 1000);
+            camera.position.set(0, 6, 9);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // Lighting setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(10, 20, 10);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const backLight = new THREE.DirectionalLight(0x818cf8, 0.4);
+            backLight.position.set(-10, -10, -10);
+            scene.add(backLight);
+
+            // Orbit controls via direct event listeners
+            const domEl = renderer.domElement;
+            domEl.addEventListener('mousedown', (e) => {
+                isDraggingMouse = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            domEl.addEventListener('mousemove', (e) => {
+                if (!isDraggingMouse) return;
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+
+                const radius = camera.position.length();
+                let theta = Math.atan2(camera.position.x, camera.position.z);
+                let phi = Math.acos(camera.position.y / radius);
+
+                theta -= deltaX * 0.01;
+                phi -= deltaY * 0.01;
+
+                phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi));
+
+                camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
+                camera.position.y = radius * Math.cos(phi);
+                camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
+                camera.lookAt(0, 0, 0);
+
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            window.addEventListener('mouseup', () => { isDraggingMouse = false; });
+
+            // Touch support
+            domEl.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    isDraggingMouse = true;
+                    previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                }
+            });
+
+            domEl.addEventListener('touchmove', (e) => {
+                if (!isDraggingMouse || e.touches.length !== 1) return;
+                const deltaX = e.touches[0].clientX - previousMousePosition.x;
+                const deltaY = e.touches[0].clientY - previousMousePosition.y;
+
+                const radius = camera.position.length();
+                let theta = Math.atan2(camera.position.x, camera.position.z);
+                let phi = Math.acos(camera.position.y / radius);
+
+                theta -= deltaX * 0.01;
+                phi -= deltaY * 0.01;
+
+                phi = Math.max(0.1, Math.min(Math.PI - 0.1, phi));
+
+                camera.position.x = radius * Math.sin(phi) * Math.sin(theta);
+                camera.position.y = radius * Math.cos(phi);
+                camera.position.z = radius * Math.sin(phi) * Math.cos(theta);
+                camera.lookAt(0, 0, 0);
+
+                previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            });
+
+            window.addEventListener('touchend', () => { isDraggingMouse = false; });
+
+            // Resize listener
+            window.addEventListener('resize', onWindowResize);
+
+            // Render loop
+            animateThreeJS();
+        }
+
+        function onWindowResize() {
+            const container = document.getElementById('three-canvas-container');
+            if (!container || !renderer || !camera) return;
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function animateThreeJS() {
+            requestAnimationFrame(animateThreeJS);
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        /**
+         * Builds hierarchical 3D hinge tree based on netNodesList structure
+         */
+        function build3DFoldingTree() {
+            if (!scene) return;
+
+            // Remove existing mesh tree
+            if (mainHingeGroup) scene.remove(mainHingeGroup);
+            if (solidCubeMesh) scene.remove(solidCubeMesh);
+            nodeMeshMap.clear();
+
+            mainHingeGroup = new THREE.Group();
+            scene.add(mainHingeGroup);
+
+            // Create solid central cube model (shown when 100% folded)
+            const solidGeo = new THREE.BoxGeometry(1.98, 1.98, 1.98);
+            const solidMat = new THREE.MeshStandardMaterial({
+                color: 0x6366f1,
+                roughness: 0.3,
+                metalness: 0.2,
+                transparent: true,
+                opacity: 0.0
+            });
+            solidCubeMesh = new THREE.Mesh(solidGeo, solidMat);
+            scene.add(solidCubeMesh);
+
+            if (netNodesList.length === 0) return;
+
+            // Root node at origin
+            const rootNode = netNodesList[0];
+            const rootMesh = createFaceMesh(rootNode.id);
+
+            // Center root square face
+            rootMesh.position.set(0, 0, 0);
+            mainHingeGroup.add(rootMesh);
+
+            nodeMeshMap.set(rootNode.id, {
+                group: mainHingeGroup,
+                mesh: rootMesh,
+                attachEdge: null
+            });
+
+            // Recursively attach children
+            attachChildNodes(rootNode.id);
+
+            // Center camera target
+            const slider = document.getElementById('fold-slider');
+            if (slider) updateFoldFromSliderProgress(slider.value);
+        }
+
+        function attachChildNodes(parentId) {
+            const children = netNodesList.filter(n => n.parentId === parentId);
+            const parentObj = nodeMeshMap.get(parentId);
+            if (!parentObj) return;
+
+            children.forEach(child => {
+                const hingeGroup = new THREE.Group();
+
+                // Position hinge at shared boundary edge of parent face
+                const side = child.attachEdge; // 'N', 'S', 'W', 'E'
+                if (side === 'N') hingeGroup.position.set(0, 0, -1);
+                else if (side === 'S') hingeGroup.position.set(0, 0, 1);
+                else if (side === 'W') hingeGroup.position.set(-1, 0, 0);
+                else if (side === 'E') hingeGroup.position.set(1, 0, 0);
+
+                parentObj.mesh.add(hingeGroup);
+
+                // Create child face mesh
+                const childMesh = createFaceMesh(child.id);
+
+                // Offset child mesh relative to its hinge pivot
+                if (side === 'N') childMesh.position.set(0, 0, -1);
+                else if (side === 'S') childMesh.position.set(0, 0, 1);
+                else if (side === 'W') childMesh.position.set(-1, 0, 0);
+                else if (side === 'E') childMesh.position.set(1, 0, 0);
+
+                hingeGroup.add(childMesh);
+
+                nodeMeshMap.set(child.id, {
+                    group: hingeGroup,
+                    mesh: childMesh,
+                    attachEdge: side
+                });
+
+                attachChildNodes(child.id);
+            });
+        }
+
+        function createFaceMesh(nodeId) {
+            const faceGroup = new THREE.Group();
+
+            // 2x2 Square Face Geometry
+            const geo = new THREE.PlaneGeometry(1.95, 1.95);
+
+            // Dual-sided materials for inner and outer colors
+            const frontMat = new THREE.MeshStandardMaterial({
+                color: 0x6366f1, // Indigo
+                side: THREE.FrontSide,
+                roughness: 0.4
+            });
+            const backMat = new THREE.MeshStandardMaterial({
+                color: 0xf59e0b, // Amber
+                side: THREE.BackSide,
+                roughness: 0.4
+            });
+
+            const frontMesh = new THREE.Mesh(geo, frontMat);
+            frontMesh.rotation.x = -Math.PI / 2;
+
+            const backMesh = new THREE.Mesh(geo, backMat);
+            backMesh.rotation.x = -Math.PI / 2;
+
+            faceGroup.add(frontMesh);
+            faceGroup.add(backMesh);
+
+            // Border edges
+            const edges = new THREE.EdgesGeometry(geo);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+            const line = new THREE.LineSegments(edges, lineMat);
+            line.rotation.x = -Math.PI / 2;
+            faceGroup.add(line);
+
+            return faceGroup;
+        }
+
+        /**
+         * Rotates hinge groups based on folding slider progress (0 to 100%)
+         */
+        function updateFoldFromSliderProgress(progressVal) {
+            const progress = parseFloat(progressVal) / 100;
+            const targetAngle = progress * (Math.PI / 2); // 0 to 90 degrees
+
+            nodeMeshMap.forEach((obj, nodeId) => {
+                if (!obj.attachEdge) return; // Skip root node
+
+                const side = obj.attachEdge;
+                if (side === 'N') obj.group.rotation.x = targetAngle;
+                else if (side === 'S') obj.group.rotation.x = -targetAngle;
+                else if (side === 'W') obj.group.rotation.z = -targetAngle;
+                else if (side === 'E') obj.group.rotation.z = targetAngle;
+            });
+
+            // Update status text
+            const label = document.getElementById('fold-percentage-label');
+            if (label) {
+                if (progressVal == 0) label.innerText = '0% (Flat Net)';
+                else if (progressVal == 100) label.innerText = '100% (Folded Cube)';
+                else label.innerText = `${Math.round(progressVal)}% Folded`;
+            }
+
+            // Solid cube indicator visibility at 100% fold
+            const isFoldedSolid = (progressVal >= 98 && getCanonicalNetIndex() !== -1);
+            const badge = document.getElementById('solid-cube-badge');
+            if (badge) {
+                badge.classList.toggle('hidden', !isFoldedSolid);
+            }
+            if (solidCubeMesh) {
+                solidCubeMesh.material.opacity = isFoldedSolid ? 0.9 : 0.0;
+            }
+        }
+
+        /* ====================================================================
+           4. 2D STAGE CANVAS & PALETTE BUILDER
+           ==================================================================== */
+        function renderSidePalette() {
+            const container = document.getElementById('side-palette-container');
+            if (!container) return;
+            container.innerHTML = `
+                <div onclick="addSquareToFirstOpenSlot()" class="palette-card bg-indigo-500 text-white border-2 border-indigo-600 rounded-2xl p-3 flex flex-col items-center justify-center text-center shadow-md cursor-pointer hover:bg-indigo-600">
+                    <i class="fa-solid fa-square text-3xl mb-1"></i>
+                    <span class="text-xs font-black">Square Face</span>
+                    <span class="text-[10px] opacity-80 font-bold">Click/Drag to Add</span>
+                </div>
+            `;
+        }
+
+        function render2DNetStage() {
+            const container = document.getElementById('stage-grid-container');
+            const faceBadge = document.getElementById('face-count-badge');
+            const statusPill = document.getElementById('face-status-pill');
+            if (!container) return;
+
+            container.innerHTML = '';
+            const count = netNodesList.length;
+
+            if (faceBadge) faceBadge.innerText = count;
+            if (statusPill) statusPill.innerText = `${count} / 6 Faces Attached`;
+
+            if (count === 0) return;
+
+            // Calculate grid bounding box
+            const minX = Math.min(...netNodesList.map(n => n.gx));
+            const maxX = Math.max(...netNodesList.map(n => n.gx));
+            const minY = Math.min(...netNodesList.map(n => n.gy));
+            const maxY = Math.max(...netNodesList.map(n => n.gy));
+
+            const cellSize = 54;
+            const offsetX = 190 - ((minX + maxX) * cellSize) / 2;
+            const offsetY = 190 - ((minY + maxY) * cellSize) / 2;
+
+            // Render square face nodes
+            netNodesList.forEach((node, idx) => {
+                const px = offsetX + node.gx * cellSize - cellSize / 2;
+                const py = offsetY + node.gy * cellSize - cellSize / 2;
+
+                const card = document.createElement('div');
+                card.className = 'absolute bg-indigo-500 text-white font-black rounded-xl border-2 border-indigo-700 shadow-md flex items-center justify-center transition-all duration-200';
+                card.style.width = `${cellSize - 4}px`;
+                card.style.height = `${cellSize - 4}px`;
+                card.style.left = `${px}px`;
+                card.style.top = `${py}px`;
+
+                // Node content (root indicator or remove button)
+                const isRoot = idx === 0;
+                card.innerHTML = `
+                    <div class="flex flex-col items-center justify-center text-center relative w-full h-full">
+                        <span class="text-xs font-black">${idx + 1}</span>
+                        ${!isRoot ? `
+                            <button onclick="removeNode('${node.id}')" class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-rose-500 hover:bg-rose-600 text-white rounded-full text-[10px] flex items-center justify-center shadow transition z-20">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        ` : `
+                            <span class="text-[8px] uppercase font-extrabold bg-indigo-700 text-amber-300 px-1 rounded">Base</span>
+                        `}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+
+            // Render open edge snap targets if less than 6 squares
+            if (count < 6) {
+                const openSlots = findOpenEdgeSlots();
+                openSlots.forEach(slot => {
+                    const spx = offsetX + slot.gx * cellSize - 14;
+                    const spy = offsetY + slot.gy * cellSize - 14;
+
+                    const btn = document.createElement('button');
+                    btn.className = 'edge-snap-slot absolute w-7 h-7 bg-indigo-600 text-amber-300 rounded-full border-2 border-white font-black text-xs flex items-center justify-center shadow-lg cursor-pointer z-20';
+                    btn.style.left = `${spx}px`;
+                    btn.style.top = `${spy}px`;
+                    btn.title = `Attach square to edge ${slot.edge}`;
+                    btn.innerHTML = '<i class="fa-solid fa-plus"></i>';
+                    btn.onclick = () => addNodeToEdge(slot.parentId, slot.edge);
+
+                    container.appendChild(btn);
+                });
+            }
+        }
+
+        function findOpenEdgeSlots() {
+            const slots = [];
+            const occupied = new Set(netNodesList.map(n => `${n.gx},${n.gy}`));
+
+            const dirs = [
+                { edge: 'N', dx: 0, dy: -1 },
+                { edge: 'S', dx: 0, dy: 1 },
+                { edge: 'W', dx: -1, dy: 0 },
+                { edge: 'E', dx: 1, dy: 0 }
+            ];
+
+            netNodesList.forEach(node => {
+                dirs.forEach(d => {
+                    const ngx = node.gx + d.dx;
+                    const ngy = node.gy + d.dy;
+                    const key = `${ngx},${ngy}`;
+
+                    if (!occupied.has(key)) {
+                        slots.push({
+                            parentId: node.id,
+                            edge: d.edge,
+                            gx: ngx,
+                            gy: ngy
+                        });
+                    }
+                });
+            });
+
+            return slots;
+        }
+
+        function addNodeToEdge(parentId, edge) {
+            AudioFX.playPop();
+            if (netNodesList.length >= 6) {
+                showFeedback('Maximum 6 faces reached for a cube net!', 'warning');
+                return;
+            }
+
+            const parentNode = netNodesList.find(n => n.id === parentId);
+            if (!parentNode) return;
+
+            let gx = parentNode.gx;
+            let gy = parentNode.gy;
+
+            if (edge === 'N') gy -= 1;
+            else if (edge === 'S') gy += 1;
+            else if (edge === 'W') gx -= 1;
+            else if (edge === 'E') gx += 1;
+
+            const newNode = {
+                id: `node_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                shapeId: 'SQ',
+                parentId: parentId,
+                attachEdge: edge,
+                gx: gx,
+                gy: gy
+            };
+
+            netNodesList.push(newNode);
+            render2DNetStage();
+            build3DFoldingTree();
+
+            if (netNodesList.length === 6) {
+                showFeedback('6 faces attached! Click "Confirm Net Creation" to test your net!', 'info');
+            }
+        }
+
+        function addSquareToFirstOpenSlot() {
+            const slots = findOpenEdgeSlots();
+            if (slots.length > 0) {
+                addNodeToEdge(slots[0].parentId, slots[0].edge);
+            }
+        }
+
+        function removeNode(nodeId) {
+            AudioFX.playPop();
+            // Remove node and all descendants recursively
+            const toRemove = new Set([nodeId]);
+            let added = true;
+            while (added) {
+                added = false;
+                netNodesList.forEach(n => {
+                    if (n.parentId && toRemove.has(n.parentId) && !toRemove.has(n.id)) {
+                        toRemove.add(n.id);
+                        added = true;
+                    }
+                });
+            }
+
+            netNodesList = netNodesList.filter(n => !toRemove.has(n.id));
+            render2DNetStage();
+            build3DFoldingTree();
+            showFeedback('Removed face from net.', 'info');
+        }
+
+        function clearCurrentNet() {
+            AudioFX.playPop();
+            netNodesList = [
+                { id: 'node_root', shapeId: 'SQ', parentId: null, attachEdge: null, gx: 0, gy: 0 }
+            ];
+            render2DNetStage();
+            build3DFoldingTree();
+            showFeedback('Cleared stage. Start building your net by clicking + slots!', 'info');
+        }
+
+        function loadSampleNet() {
+            AudioFX.playPop();
+            netNodesList = JSON.parse(JSON.stringify(SAMPLE_CUBE_NET));
+            render2DNetStage();
+            build3DFoldingTree();
+            showFeedback('Loaded sample 1-4-1 Cube Net. Click "Confirm Net Creation"!', 'info');
+        }
+
+        function rotateEntireNet() {
+            AudioFX.playPop();
+            if (netNodesList.length === 0) return;
+
+            // Rotate coordinates 90 degrees clockwise: (gx, gy) -> (-gy, gx)
+            netNodesList.forEach(node => {
+                const oldGx = node.gx;
+                const oldGy = node.gy;
+                node.gx = -oldGy;
+                node.gy = oldGx;
+
+                // Rotate edge attachments
+                if (node.attachEdge === 'N') node.attachEdge = 'E';
+                else if (node.attachEdge === 'E') node.attachEdge = 'S';
+                else if (node.attachEdge === 'S') node.attachEdge = 'W';
+                else if (node.attachEdge === 'W') node.attachEdge = 'N';
+            });
+
+            render2DNetStage();
+            build3DFoldingTree();
+            showFeedback('Rotated net 90° clockwise.', 'info');
+        }
+
+        /* ====================================================================
+           5. CANONICAL NET CONVERTER & MODAL SHOWCASE
+           ==================================================================== */
+        function openNetsModal() {
+            AudioFX.playPop();
+            renderNetsModalGrid();
+            document.getElementById('nets-modal').classList.remove('hidden');
+        }
+
+        function closeNetsModal() {
+            AudioFX.playPop();
+            document.getElementById('nets-modal').classList.add('hidden');
+        }
+
+        function renderNetsModalGrid() {
+            const grid = document.getElementById('modal-nets-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            CANONICAL_CUBE_NETS.forEach((netObj, idx) => {
+                const netNum = idx + 1;
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-2xl border border-slate-200 p-3 shadow-sm hover:shadow-md hover:border-amber-400 transition flex flex-col justify-between';
+
+                // Parse coordinates for mini 2D preview
+                const coords = netObj.sig.split('|').map(s => {
+                    const [r, c] = s.split(',').map(Number);
+                    return { r, c };
+                });
+
+                const maxR = Math.max(...coords.map(p => p.r));
+                const maxC = Math.max(...coords.map(p => p.c));
+
+                let previewGridHTML = '';
+                for (let r = 0; r <= maxR; r++) {
+                    let rowHTML = '<div class="flex justify-center">';
+                    for (let c = 0; c <= maxC; c++) {
+                        const exists = coords.some(p => p.r === r && p.c === c);
+                        rowHTML += `<div class="w-4 h-4 sm:w-5 sm:h-5 m-0.5 rounded-sm ${exists ? 'bg-indigo-500 border border-indigo-600' : 'bg-transparent'}"></div>`;
+                    }
+                    rowHTML += '</div>';
+                    previewGridHTML += rowHTML;
+                }
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-black uppercase text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md">Way #${netNum}</span>
+                            <span class="text-[10px] font-extrabold text-slate-400">${netObj.type}</span>
+                        </div>
+                        <h4 class="text-xs font-black text-slate-800 mb-2">${netObj.name}</h4>
+                        <div class="bg-slate-100 rounded-xl p-2.5 my-2 flex flex-col items-center justify-center min-h-[90px]">
+                            ${previewGridHTML}
+                        </div>
+                    </div>
+                    <button onclick="loadCanonicalNet(${netNum})" class="w-full mt-2 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black rounded-xl text-xs transition flex items-center justify-center gap-1 shadow">
+                        <i class="fa-solid fa-cloud-arrow-down"></i> Load Way #${netNum}
+                    </button>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function buildTreeFromCoords(coordStr) {
+            const coords = coordStr.split('|').map(s => {
+                const [gy, gx] = s.split(',').map(Number);
+                return { gx, gy };
+            });
+
+            const nodes = [];
+            const visited = new Set();
+            
+            const root = coords[0];
+            visited.add(`${root.gx},${root.gy}`);
+            nodes.push({ id: 'node_1', shapeId: 'SQ', parentId: null, attachEdge: null, gx: root.gx, gy: root.gy });
+
+            let idCounter = 2;
+            const queue = [nodes[0]];
+
+            while (queue.length > 0 && visited.size < coords.length) {
+                const curr = queue.shift();
+                const dirs = [
+                    { edge: 'N', dx: 0, dy: -1 },
+                    { edge: 'S', dx: 0, dy: 1 },
+                    { edge: 'W', dx: -1, dy: 0 },
+                    { edge: 'E', dx: 1, dy: 0 }
+                ];
+
+                for (let d of dirs) {
+                    const ngx = curr.gx + d.dx;
+                    const ngy = curr.gy + d.dy;
+                    const key = `${ngx},${ngy}`;
+
+                    if (!visited.has(key) && coords.some(c => c.gx === ngx && c.gy === ngy)) {
+                        visited.add(key);
+                        const newNode = {
+                            id: `node_${idCounter++}`,
+                            shapeId: 'SQ',
+                            parentId: curr.id,
+                            attachEdge: d.edge,
+                            gx: ngx,
+                            gy: ngy
+                        };
+                        nodes.push(newNode);
+                        queue.push(newNode);
+                    }
+                }
+            }
+            return nodes;
+        }
+
+        function loadCanonicalNet(index) {
+            AudioFX.playPop();
+            if (index < 1 || index > 11) return;
+
+            const netObj = CANONICAL_CUBE_NETS[index - 1];
+            netNodesList = buildTreeFromCoords(netObj.sig);
+
+            render2DNetStage();
+            build3DFoldingTree();
+            closeNetsModal();
+
+            showFeedback(`Loaded Cube Net Way #${index} (${netObj.name}). Drag slider or click Fold!`, 'success');
+        }
+
+        /* ====================================================================
+           6. CAIT VALIDATION & CUBE NET FOLDING ENGINE
+           ==================================================================== */
+        function animateFoldTo(targetVal, duration = 800) {
+            const slider = document.getElementById('fold-slider');
+            if (!slider) return;
+            const startVal = parseFloat(slider.value) || 0;
+            const startTime = performance.now();
+
+            function step(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = 1 - (1 - progress) * (1 - progress);
+                const currentVal = startVal + (targetVal - startVal) * easeProgress;
+                slider.value = currentVal;
+                updateFoldFromSliderProgress(currentVal);
+
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                }
+            }
+            requestAnimationFrame(step);
+        }
+
+        /**
+         * Finds the canonical cube net index (1 to 11) for any 6-square layout,
+         * invariant to rotation and reflection.
+         */
+        function getCanonicalNetIndex() {
+            if (netNodesList.length !== 6) return -1;
+
+            const coords = netNodesList.map(n => ({ r: n.gy, c: n.gx }));
+
+            // 8 Transformations (4 Rotations x 2 Reflections)
+            const transformations = [
+                ({r, c}) => ({ r:  r, c:  c }),
+                ({r, c}) => ({ r:  c, c: -r }),
+                ({r, c}) => ({ r: -r, c: -c }),
+                ({r, c}) => ({ r: -c, c:  r }),
+                ({r, c}) => ({ r:  r, c: -c }),
+                ({r, c}) => ({ r: -r, c:  c }),
+                ({r, c}) => ({ r:  c, c:  r }),
+                ({r, c}) => ({ r: -c, c: -r })
+            ];
+
+            for (let tf of transformations) {
+                const transformed = coords.map(tf);
+                const minR = Math.min(...transformed.map(p => p.r));
+                const minC = Math.min(...transformed.map(p => p.c));
+                const normalized = transformed
+                    .map(p => ({ r: p.r - minR, c: p.c - minC }))
+                    .sort((a, b) => a.r - b.r || a.c - b.c);
+                
+                const sig = normalized.map(p => `${p.r},${p.c}`).join('|');
+                const idx = CANONICAL_CUBE_NETS.findIndex(item => item.sig === sig);
+                if (idx !== -1) {
+                    return idx + 1; // Return 1-based index (1 to 11)
+                }
+            }
+            return -1; // Not a valid cube net
+        }
+
+        function confirmNetCreation() {
+            if (netNodesList.length !== 6) {
+                AudioFX.playError();
+                showFeedback(`A valid net for a CUBE requires exactly 6 connected square faces! You attached ${netNodesList.length}.`, 'error');
+                return;
+            }
+
+            // Build 3D mesh hinge tree
+            build3DFoldingTree();
+
+            // Symmetry-invariant canonical net identification
+            const unlockedId = getCanonicalNetIndex();
+
+            if (unlockedId !== -1) {
+                AudioFX.playSuccess();
+                showFeedback(`🎉 Cube Formed! Valid 6-square layout identified as Cube Net Way #${unlockedId}!`, 'success');
+                animateFoldTo(100, 900);
+            } else {
+                AudioFX.playError();
+                animateFoldTo(35, 500);
+            }
+        }
+
+        function toggleQuizMode() {
+            AudioFX.playPop();
+            isQuizMode = !isQuizMode;
+            const box = document.getElementById('quiz-options-box');
+            const toggleText = document.getElementById('quiz-toggle-text');
+
+            if (isQuizMode) {
+                box.classList.remove('hidden');
+                toggleText.innerText = 'Switch to Net Builder Mode';
+                setupQuizOptions();
+                showFeedback('Quiz Mode: Predict if the current 2D net will successfully fold into a 3D cube!', 'warning');
+            } else {
+                box.classList.add('hidden');
+                toggleText.innerText = 'Switch to Folding Prediction Quiz';
+                showFeedback('Builder Mode: Attach 6 square faces and click "Confirm Net Creation"!', 'info');
+            }
+        }
+
+        function setupQuizOptions() {
+            const grid = document.getElementById('quiz-buttons-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const options = [
+                { label: 'Yes, forms a closed Cube!', valid: true },
+                { label: 'No, faces will overlap!', valid: false }
+            ];
+
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'px-3 py-2 bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-black shadow-sm transition text-center';
+                btn.innerText = opt.label;
+                btn.onclick = () => {
+                    const actualValid = (getCanonicalNetIndex() !== -1);
+
+                    if (opt.valid === actualValid) {
+                        AudioFX.playSuccess();
+                        showFeedback(`Correct prediction! Click "Confirm Net Creation" to watch it fold into a 3D cube!`, 'success');
+                    } else {
+                        AudioFX.playError();
+                        showFeedback(`Incorrect prediction. Click "Confirm Net Creation" to test the net in 3D and see where faces land!`, 'error');
+                    }
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function onFoldSliderChange(val) {
+            updateFoldFromSliderProgress(val);
+        }
+
+        function toggleAutoPlayFold() {
+            AudioFX.playPop();
+            const btn = document.getElementById('btn-autofold');
+            if (!btn) return;
+
+            if (autoFoldTimer) {
+                clearInterval(autoFoldTimer);
+                autoFoldTimer = null;
+                btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                let val = parseInt(document.getElementById('fold-slider').value) || 0;
+                autoFoldTimer = setInterval(() => {
+                    if (foldDirectionForward) {
+                        val += 2;
+                        if (val >= 100) foldDirectionForward = false;
+                    } else {
+                        val -= 2;
+                        if (val <= 0) foldDirectionForward = true;
+                    }
+                    document.getElementById('fold-slider').value = val;
+                    updateFoldFromSliderProgress(val);
+                }, 30);
+            }
+        }
+
+        function showFeedback(msg, type) {
+            const card = document.getElementById('feedback-card');
+            const icon = document.getElementById('feedback-icon');
+            const txt = document.getElementById('feedback-text');
+            if (!card || !icon || !txt) return;
+
+            txt.innerText = msg;
+
+            if (type === 'success') {
+                card.className = 'mt-2.5 p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-xs font-extrabold text-emerald-900 flex items-center justify-between min-h-[50px] shadow-sm';
+                icon.className = 'fa-solid fa-circle-check text-emerald-600 text-xl flex-shrink-0';
+            } else if (type === 'error') {
+                card.className = 'mt-2.5 p-3 rounded-xl bg-rose-50 border border-rose-300 text-xs font-extrabold text-rose-900 flex items-center justify-between min-h-[50px] shadow-sm';
+                icon.className = 'fa-solid fa-triangle-exclamation text-rose-600 text-xl flex-shrink-0';
+            } else if (type === 'warning') {
+                card.className = 'mt-2.5 p-3 rounded-xl bg-amber-50 border border-amber-300 text-xs font-extrabold text-amber-900 flex items-center justify-between min-h-[50px] shadow-sm';
+                icon.className = 'fa-solid fa-triangle-exclamation text-amber-600 text-xl flex-shrink-0';
+            } else {
+                card.className = 'mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs font-extrabold text-slate-700 flex items-center justify-between min-h-[50px]';
+                icon.className = 'fa-solid fa-circle-info text-indigo-500 text-xl flex-shrink-0';
+            }
+        }
+
+        function confirmResetAll() {
+            AudioFX.playPop();
+            if (confirm("Reset current workspace and clear net layout?")) {
+                clearCurrentNet();
+                showFeedback('Workspace reset successfully.', 'info');
+            }
+        }
+
+        /* ====================================================================
+           7. INITIALIZATION ON WINDOW LOAD
+           ==================================================================== */
+        window.onload = function () {
+            initThreeJS();
+            renderSidePalette();
+            clearCurrentNet();
+        };
+    </script>
+</body>
+</html>
