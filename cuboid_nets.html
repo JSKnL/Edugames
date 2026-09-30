@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cuboid Nets Lab</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,"Segoe UI",Arial,sans-serif;background:#eef3fa;color:#1d2b3a}
+header{background:#1f4e8c;color:#fff;padding:10px 16px}
+h1{margin:0;font-size:20px}header p{margin:2px 0 0;font-size:13px;opacity:.9}
+.wrap{max-width:1000px;margin:auto;padding:10px}
+button{font:inherit;cursor:pointer}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.btn{padding:7px 14px;border:0;border-radius:8px;background:#1f4e8c;color:#fff;font-weight:600}
+.btn.alt{background:#d9534f}.btn.grn{background:#1b7f3b}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:700px){.panels{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:12px;padding:8px;box-shadow:0 1px 4px #0003}
+.card h2{margin:2px 4px 6px;font-size:15px}
+svg#net,canvas{width:100%;height:auto;display:block;touch-action:none}
+canvas{cursor:grab;border-radius:8px;background:#f8fbff}
+.slot{fill:#fff;stroke:#7a8aa0;stroke-width:2;stroke-dasharray:6 4;cursor:pointer}
+.slot:hover{fill:#fff6dc}
+.slot.lock{stroke:#1d2b3a;stroke-dasharray:none;cursor:default}
+.slot.bad{animation:sh .4s;fill:#ffd6d6}
+@keyframes sh{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.ctl{display:flex;gap:8px;align-items:center;padding:4px}.ctl input{flex:1}
+#tray{display:flex;flex-wrap:wrap;gap:8px;min-height:80px;padding:4px}
+.piece{background:#f5f8fc;border:3px solid #b8c6da;border-radius:10px;padding:6px;text-align:center;font-size:11px;cursor:pointer}
+.piece.sel{border-color:#f2a93b;background:#fff3d6}
+.piece svg{display:block;margin:auto}
+#msg{min-height:24px;padding:6px 4px;font-weight:600}
+#msg.ok{color:#1b7f3b}#msg.no{color:#c0392b}
+.info{font-size:13px;padding:2px 6px;color:#455}
+#gal{display:none;margin-bottom:10px}
+#gal .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.th{border:3px solid #cfd9e8;border-radius:10px;background:#fafcff;padding:4px;text-align:center;font-size:12px;font-weight:600;cursor:pointer}
+.th.on{border-color:#f2a93b;background:#fff3d6}
+.th svg{width:100%;height:90px}
+</style></head><body>
+<header><h1>Cuboid Nets Lab</h1><p>Build a net of a cuboid (6 cm × 4.2 cm × 3 cm), then fold it. There are 11 different nets!</p></header>
+<div class="wrap">
+ <div class="bar"><button class="btn grn" id="gb">Show 11 nets</button><b id="cn"></b></div>
+ <div class="card" id="gal"><h2>The 11 nets of a cuboid – tap one to practise building it</h2><div class="grid" id="gg"></div></div>
+ <div class="card" style="margin-bottom:10px"><h2>Shape tray – tap a rectangle, then tap where it belongs on the net (shapes can be turned to fit)</h2>
+  <div id="tray"></div><div id="msg"></div><button class="btn alt" id="reset">↺ Reset</button></div>
+ <div class="panels">
+  <div class="card"><h2>2D Net – place the shapes</h2><svg id="net" viewBox="0 0 420 420"></svg><div class="info" id="prog"></div></div>
+  <div class="card"><h2>3D View – fold the net (drag to rotate)</h2><canvas id="cv" width="840" height="840"></canvas>
+   <div class="ctl"><span>Flat</span><input type="range" id="sl" min="0" max="100" value="0"><span>Folded</span><button class="btn" id="fold">▶ Fold</button></div>
+   <div class="info">Faces: 6 &nbsp;•&nbsp; Edges: 12 &nbsp;•&nbsp; Vertices: 8</div></div>
+ </div>
+</div>
+<script>
+const $=id=>document.getElementById(id),SV='http://www.w3.org/2000/svg';
+const NETS=[[[0,1],[1,0],[1,1],[1,2],[1,3],[2,2]],[[0,1],[1,0],[1,1],[1,2],[1,3],[2,1]],[[0,0],[0,1],[1,1],[2,1],[3,1],[3,2]],
+[[0,0],[0,1],[1,1],[2,1],[2,2],[3,1]],[[0,0],[0,1],[1,1],[1,2],[2,1],[3,1]],[[0,0],[0,1],[1,1],[1,2],[2,2],[2,3]],
+[[0,0],[0,1],[1,1],[1,2],[1,3],[2,3]],[[0,0],[0,1],[1,1],[1,2],[1,3],[2,2]],[[0,0],[0,1],[1,1],[1,2],[1,3],[2,1]],
+[[0,0],[0,1],[0,2],[1,1],[2,1],[3,1]],[[0,0],[0,1],[0,2],[1,2],[1,3],[1,4]]];
+const DIM=[6,4.2,3],NAME={D:'Bottom',U:'Top',N:'Back',S:'Front',E:'Right',W:'Left'},
+COL={D:'#f2a93b',U:'#f7d774',N:'#5b8fd1',S:'#7fb3e6',E:'#5cb87a',W:'#8fd19e'};
+const DIRS={E:[0,1],W:[0,-1],N:[-1,0],S:[1,0]};
+function roll(o,k){const{D,U,N,S,E,W}=o;
+ return k=='E'?{D:E,E:U,U:W,W:D,N,S}:k=='W'?{D:W,W:U,U:E,E:D,N,S}:k=='N'?{D:N,N:U,U:S,S:D,E,W}:{D:S,S:U,U:N,N:D,E,W}}
+const fmt=n=>+n.toFixed(1);
+const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+const sig=p=>p.length+':'+p.map((v,i)=>dist(v,p[(i+1)%p.length]).toFixed(2)).sort().join(',');
+// unfold the cuboid net: die-rolling gives each cell's face and size
+function layout(cells){
+ const has=new Set(cells.map(c=>c+'')),seen=new Set([cells[0]+'']),out=[],
+ q=[{c:cells[0],x:0,y:0,d:DIM,o:{D:'D',U:'U',N:'N',S:'S',E:'E',W:'W'},par:-1}];
+ while(q.length){const s=q.shift(),[w,h]=s.d,id=out.length,lab=s.o.D;
+  out.push({x:s.x,y:s.y,w,h,lab,par:s.par,hin:s.hin,poly:[[s.x,s.y],[s.x+w,s.y],[s.x+w,s.y+h],[s.x,s.y+h]]});
+  for(const k in DIRS){const n=[s.c[0]+DIRS[k][0],s.c[1]+DIRS[k][1]];if(!has.has(n+'')||seen.has(n+''))continue;seen.add(n+'');
+   const d2=k=='E'||k=='W'?[s.d[2],s.d[1],s.d[0]]:[s.d[0],s.d[2],s.d[1]],[x,y]=[s.x,s.y];
+   const nx=k=='E'?x+w:k=='W'?x-d2[0]:x,ny=k=='S'?y+h:k=='N'?y-d2[1]:y;
+   const hin=k=='E'?[[x+w,y],[x+w,y+h],[1,0]]:k=='W'?[[x,y],[x,y+h],[-1,0]]:k=='N'?[[x,y],[x+w,y],[0,-1]]:[[x,y+h],[x+w,y+h],[0,1]];
+   q.push({c:n,x:nx,y:ny,d:d2,o:roll(s.o,k),par:id,hin})}}
+ out.forEach(f=>{if(f.par<0)return;const[A,B,n]=f.hin,L=dist(A,B),u=[(B[0]-A[0])/L,-(B[1]-A[1])/L,0],nn=[n[0],-n[1]];
+  f.A=[A[0],-A[1],0];f.u=u;f.ang=(u[0]*nn[1]-u[1]*nn[0]>0?1:-1)*Math.PI/2});
+ return out}
+function rot(v,A,u,a){const w=[v[0]-A[0],v[1]-A[1],v[2]-A[2]],c=Math.cos(a),s=Math.sin(a),d=u[0]*w[0]+u[1]*w[1]+u[2]*w[2],
+ x=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]];
+ return[0,1,2].map(i=>A[i]+w[i]*c+x[i]*s+u[i]*d*(1-c))}
+const shuf=a=>a.sort(()=>Math.random()-.5);
+let cur=0,F=[],placed=[],tray=[],sel=null,t=0,raf=0,yaw=.5,pit=.9,K=1,ox=0,oy=0;
+
+function load(i){
+ cur=i;sel=null;t=0;cancelAnimationFrame(raf);F=layout(NETS[i]);placed=F.map(()=>0);
+ const need=new Set(F.map(f=>sig(f.poly)));
+ tray=F.map(f=>{const a=Math.max(f.w,f.h),b=Math.min(f.w,f.h);return{poly:[[0,0],[a,0],[a,b],[0,b]],name:`${fmt(a)} × ${fmt(b)} cm`}});
+ shuf([{name:'Triangle',poly:[[0,0],[4,0],[2,3.2]]},{name:'Square',poly:[[0,0],[3.5,0],[3.5,3.5],[0,3.5]]},
+  {name:'Parallelogram',poly:[[0,0],[5,0],[6.5,2.8],[1.5,2.8]]},{name:'Rectangle',poly:[[0,0],[7,0],[7,2],[0,2]]}]
+  .filter(d=>!need.has(sig(d.poly)))).slice(0,3).forEach(d=>tray.push(d));
+ tray.forEach(p=>{p.sig=sig(p.poly);p.used=0});shuf(tray);tray.forEach((p,k)=>p.id=k);
+ const xs=F.flatMap(f=>[f.x,f.x+f.w]),ys=F.flatMap(f=>[f.y,f.y+f.h]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+ K=Math.min(380/(x1-x0),380/(y1-y0));ox=210-K*(x0+x1)/2;oy=210-K*(y0+y1)/2;
+ drawNet();drawTray();$('sl').value=0;$('fold').textContent='▶ Fold';upd();draw();
+ setMsg('Tap a rectangle in the tray to begin.','');$('cn').textContent='Net '+(i+1)+' of 11';
+ [...$('gg').children].forEach((b,k)=>b.classList.toggle('on',k==i));
+}
+const pt=p=>(p[0]*K+ox).toFixed(1)+','+(p[1]*K+oy).toFixed(1);
+function drawNet(){const s=$('net');s.innerHTML='';
+ F.forEach((f,j)=>{const e=document.createElementNS(SV,'polygon');e.setAttribute('points',f.poly.map(pt).join(' '));
+  e.setAttribute('class','slot');e.id='s'+j;e.onclick=()=>place(j);s.appendChild(e)})}
+function drawTray(){const T=$('tray');T.innerHTML='';
+ const g=tray.map(p=>{const w=Math.max(...p.poly.map(v=>v[0])),h=Math.max(...p.poly.map(v=>v[1]));return{w,h}}),
+ k=Math.min(K*.55,110/Math.max(...g.map(o=>Math.max(o.w,o.h))));
+ tray.forEach((p,i)=>{if(p.used)return;const o=g[i],d=document.createElement('div');d.className='piece'+(sel===p.id?' sel':'');
+  d.innerHTML=`<svg width="${o.w*k+6}" height="${o.h*k+6}"><polygon points="${p.poly.map(v=>(v[0]*k+3).toFixed(1)+','+(v[1]*k+3).toFixed(1)).join(' ')}" fill="#7fb3e6" stroke="#1d2b3a" stroke-width="2"/></svg>${p.name}`;
+  d.onclick=()=>{sel=sel===p.id?null:p.id;setMsg(sel===null?'':'Now tap the place on the net where it fits.','');drawTray()};T.appendChild(d)})}
+function setMsg(m,c){$('msg').textContent=m;$('msg').className=c}
+function upd(){$('prog').textContent=`Shapes placed: ${placed.filter(x=>x).length} / 6`}
+function place(j){
+ if(placed[j])return;if(sel===null){setMsg('Pick a shape from the tray first.','no');return}
+ const p=tray[sel],e=$('s'+j),f=F[j];
+ if(p.sig===sig(f.poly)){placed[j]=1;p.used=1;sel=null;e.classList.add('lock');e.style.fill=COL[f.lab];
+  const tx=document.createElementNS(SV,'text');tx.setAttribute('x',(f.x+f.w/2)*K+ox);tx.setAttribute('y',(f.y+f.h/2)*K+oy);
+  tx.setAttribute('text-anchor','middle');tx.setAttribute('font-size','12');tx.setAttribute('pointer-events','none');
+  tx.innerHTML=`<tspan x="${tx.getAttribute('x')}" dy="-2">${NAME[f.lab]}</tspan><tspan x="${tx.getAttribute('x')}" dy="14" font-size="10">${fmt(f.w)}×${fmt(f.h)}</tspan>`;$('net').appendChild(tx);
+  if(placed.every(x=>x)){setMsg('🎉 Net complete! Watch it fold into a cuboid.','ok');setTimeout(()=>go(1),500)}else setMsg('✔ Correct – locked in place!','ok');
+  drawTray();upd();draw()}
+ else{e.classList.remove('bad');void e.getBBox();e.classList.add('bad');setTimeout(()=>e.classList.remove('bad'),450);
+  setMsg('✘ Not this one. Compare the length and width of the face with the shape.','no')}}
+
+// 3D
+const cv=$('cv'),cx=cv.getContext('2d');cx.scale(2,2);
+function v3(f){let p=f.poly.map(v=>[v[0],-v[1],0]),g=f;while(g.par>=0){p=p.map(v=>rot(v,g.A,g.u,g.ang*t));g=F[g.par]}return p}
+function proj(p){const c=Math.cos(yaw),s=Math.sin(yaw),x=p[0]*c-p[1]*s,y=p[0]*s+p[1]*c;
+ return[x,p[2]*Math.cos(pit)+y*Math.sin(pit),y*Math.cos(pit)-p[2]*Math.sin(pit)]}
+function draw(){
+ cx.clearRect(0,0,420,420);
+ const it=F.map((f,j)=>{const q=v3(f).map(proj);return{j,q,d:q.reduce((a,b)=>a+b[2],0)/4}}).sort((a,b)=>b.d-a.d),
+ a=it.flatMap(o=>o.q.map(p=>p[0])),b=it.flatMap(o=>o.q.map(p=>p[1])),
+ mx=(Math.min(...a)+Math.max(...a))/2,my=(Math.min(...b)+Math.max(...b))/2,k=190/Math.max(.01,(Math.max(...a)-Math.min(...a))/2,(Math.max(...b)-Math.min(...b))/2);
+ it.forEach(o=>{cx.beginPath();o.q.forEach((p,i)=>{const X=210+(p[0]-mx)*k,Y=215-(p[1]-my)*k;i?cx.lineTo(X,Y):cx.moveTo(X,Y)});cx.closePath();
+  if(placed[o.j]){cx.globalAlpha=.95;cx.fillStyle=COL[F[o.j].lab];cx.fill();cx.globalAlpha=1;cx.setLineDash([]);cx.strokeStyle='#1d2b3a';cx.lineWidth=2}
+  else{cx.fillStyle='rgba(140,155,180,.15)';cx.fill();cx.setLineDash([5,4]);cx.strokeStyle='#9aa8bc';cx.lineWidth=1.5}
+  cx.stroke();cx.setLineDash([])});
+ cx.fillStyle='#667';cx.font='12px sans-serif';cx.fillText(t>=.99?'Folded':t<=.01?'Flat net':'Folding… '+Math.round(t*100)+'%',8,16)}
+function go(to){cancelAnimationFrame(raf);const f=t,st=performance.now(),D=2200*Math.abs(to-f)+1;
+ (function s(now){const u=Math.min(1,(now-st)/D);t=f+(to-f)*u;$('sl').value=t*100;draw();$('fold').textContent=t>.5?'◀ Unfold':'▶ Fold';if(u<1)raf=requestAnimationFrame(s)})(st)}
+$('fold').onclick=()=>go(t>.5?0:1);
+$('sl').oninput=e=>{cancelAnimationFrame(raf);t=e.target.value/100;$('fold').textContent=t>.5?'◀ Unfold':'▶ Fold';draw()};
+let dr=null;
+cv.onpointerdown=e=>{dr=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId)};cv.onpointerup=()=>dr=null;
+cv.onpointermove=e=>{if(!dr)return;yaw+=(e.clientX-dr[0])*.01;pit=Math.max(.1,Math.min(1.5,pit+(e.clientY-dr[1])*.01));dr=[e.clientX,e.clientY];draw()};
+$('reset').onclick=()=>load(cur);
+$('gb').onclick=()=>{const g=$('gal'),o=g.style.display=='block';g.style.display=o?'none':'block';$('gb').textContent=o?'Show 11 nets':'Hide 11 nets'};
+// gallery thumbnails (fully coloured answers)
+NETS.forEach((c,i)=>{const L=layout(c),xs=L.flatMap(f=>[f.x,f.x+f.w]),ys=L.flatMap(f=>[f.y,f.y+f.h]),x0=Math.min(...xs),y0=Math.min(...ys),
+ w=Math.max(...xs)-x0,h=Math.max(...ys)-y0,d=document.createElement('div');d.className='th';
+ d.innerHTML=`<svg viewBox="${x0-.5} ${y0-.5} ${w+1} ${h+1}" preserveAspectRatio="xMidYMid meet">${L.map(f=>`<rect x="${f.x}" y="${f.y}" width="${f.w}" height="${f.h}" fill="${COL[f.lab]}" stroke="#1d2b3a" stroke-width=".12"/>`).join('')}</svg>Net ${i+1}`;
+ d.onclick=()=>{load(i);setMsg('Net '+(i+1)+' loaded – build it!','')};$('gg').appendChild(d)});
+load(0);
+</script></body></html>
