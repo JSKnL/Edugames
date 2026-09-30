@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nets of Solids: Make a Prism</title>
+<style>
+:root{--ink:#1d2b3a;--paper:#eef3f7;--line:#c9d6e0;--accent:#e4572e;--card:#fff}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Trebuchet MS",Verdana,sans-serif;color:var(--ink);background:var(--paper);
+ background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:24px 24px}
+.wrap{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:0 0 4px}
+.sub{margin:0 0 12px;font-size:.95rem}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:10px;margin-bottom:12px}
+button{font:inherit;color:var(--ink);cursor:pointer}
+button.mk{border:2px solid var(--ink);background:#fff;border-radius:8px;padding:8px 12px;font-size:.9rem}
+button.mk[aria-pressed=true]{background:var(--ink);color:#fff}
+button.act{border:2px solid var(--ink);background:#fff;border-radius:8px;padding:8px 14px}
+button.act:disabled{opacity:.4;cursor:not-allowed}
+button.reset{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:bold;margin-left:auto}
+button:focus-visible,input:focus-visible{outline:3px solid #2a7fff;outline-offset:2px}
+.tray{background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:10px;margin-bottom:12px}
+.tray h2,.panel h2{margin:0 0 6px;font-size:1rem}
+.pieces{display:flex;flex-wrap:wrap;gap:8px;min-height:84px;align-items:flex-end}
+.piece{border:2px solid transparent;background:#f4f7fa;border-radius:8px;padding:5px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.72rem}
+.piece.sel{border-color:var(--accent);background:#fff1ec}
+.piece.used{display:none}
+.panels{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.panels{grid-template-columns:1fr}}
+.panel{background:var(--card);border:2px solid var(--ink);border-radius:10px;position:relative;height:360px;overflow:hidden;padding:8px 10px}
+.panel .tag{position:absolute;right:10px;top:10px;font-size:.8rem;z-index:2;opacity:.75}
+.p3{perspective:900px;touch-action:none;cursor:grab}
+.panel h2{position:relative;z-index:2}
+.stage{position:absolute;left:50%;top:54%;width:0;height:0;transform-style:preserve-3d}
+.f{position:absolute;transform-style:preserve-3d;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;user-select:none}
+.f svg{position:absolute;left:0;top:0;overflow:visible}
+.f polygon{stroke:var(--ink);stroke-width:2;stroke-linejoin:round;fill-opacity:.92}
+.f2 polygon{fill:transparent;stroke:#7a8b99;stroke-dasharray:5 4}
+.f2.on polygon{stroke:var(--ink);stroke-dasharray:none}
+.f2.on{cursor:default}
+.f2.bad polygon{stroke:#d00;stroke-width:3}
+.f2{cursor:pointer}
+.f span{position:relative;pointer-events:none;text-align:center;line-height:1.15;white-space:pre}
+.f2:not(.on) span{font-weight:normal;color:#5b6b7a}
+.stage3 .f{transition:transform .8s ease-in-out}
+.stage3.nt .f{transition:none}
+.ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:10px;margin-top:12px}
+.ctl input{flex:1;min-width:160px}
+.info{background:var(--card);border:2px solid var(--ink);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:.95rem;display:flex;flex-wrap:wrap;gap:6px 24px}
+#msg{flex-basis:100%;font-weight:bold;min-height:1.3em}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <h1>Make a prism from its net</h1>
+ <p class="sub">Choose a prism, pick the shapes it needs, place them on the net, then fold it up in 3D.</p>
+ <div class="bar" id="bar"><button class="act reset" id="reset">Reset</button></div>
+ <div class="tray"><h2>Shapes. Tap a shape, then tap its place on the net.</h2><div class="pieces" id="pieces"></div></div>
+ <div class="panels">
+  <div class="panel"><h2>2D net</h2><span class="tag" id="hint2"></span><div class="stage" id="st2"></div></div>
+  <div class="panel p3" id="p3"><h2>3D solid</h2><span class="tag">Drag to turn it</span><div class="stage stage3" id="st3"></div></div>
+ </div>
+ <div class="ctl">
+  <button class="act" id="play" disabled>Fold</button>
+  <label for="fold">Fold amount</label>
+  <input type="range" id="fold" min="0" max="100" value="0" disabled>
+ </div>
+ <div class="info"><b id="name"></b><span id="facts"></span><span id="prog"></span><div id="msg" role="status" aria-live="polite"></div></div>
+</div>
+<script>
+const G='#c8ced4',Y='#f6bd60',T='#84a59d',P='#b8a1d9',R='#f28482';
+const NAMES={3:'triangle',4:'square',5:'pentagon',6:'hexagon',7:'heptagon',8:'octagon'};
+const $=id=>document.getElementById(id);
+function polyGeo(n,a,dir){
+ const Rr=a/(2*Math.sin(Math.PI/n)),v=[];
+ for(let k=0;k<n;k++){const f=Math.PI/2+Math.PI/n+2*Math.PI*k/n;v.push([Rr*Math.cos(f),Rr*Math.sin(f)])}
+ const xs=v.map(p=>p[0]),ys=v.map(p=>p[1]),x0=Math.min(...xs),y0=Math.min(...ys),y1=Math.max(...ys),H=y1-y0;
+ const q=v.map(p=>[p[0]-x0,dir=='b'?y1-p[1]:p[1]-y0]);
+ return {w:Math.max(...xs)-x0,h:H,pts:q.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '),off:(dir=='b'?y1:-y0)-H/2};
+}
+const rectPts=(w,h)=>`0,0 ${w},0 ${w},${h} 0,${h}`;
+const rp=(w,h,c)=>({w,h,c,pts:rectPts(w,h)});
+const pp=(n,a,c)=>{const g=polyGeo(n,a,'t');return {pg:{n,a},w:g.w,h:g.h,c,pts:g.pts}};
+function shuf(a){let s=7;for(let i=a.length-1;i>0;i--){s=(s*9301+49297)%233280;const j=Math.floor(s/233280*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function polyNode(name,e,n,a){const g=polyGeo(n,a,e);return {n:name,pg:{n,a},e,w:g.w,h:g.h,pts:g.pts,off:g.off}}
+
+function stripShape(label,n,a,L){
+ const pn=NAMES[n];
+ return {label,name:label[0].toUpperCase()+label.slice(1),
+  facts:`${n+2} faces (${n} rectangles and 2 ${pn}s), ${3*n} edges, ${2*n} vertices. Each fold between side faces turns ${360/n}°.`,
+  tree:()=>{
+   const i0=Math.floor((n-1)/2);
+   const chain=(dir,i,c)=>c>0?{n:'Side '+(i+1),w:a,h:L,e:dir,m:360/n,k:c>1?[chain(dir,i+(dir=='r'?1:-1),c-1)]:[]}:null;
+   const root={n:'Side '+(i0+1),w:a,h:L,k:[]};
+   const r=chain('r',i0+1,n-1-i0),l=chain('l',i0-1,i0);
+   if(r)root.k.push(r);if(l)root.k.push(l);
+   root.k.push(polyNode('Top','t',n,a),polyNode('Bottom','b',n,a));
+   return root},
+  pcs:()=>{const p=[];for(let i=0;i<n;i++)p.push(rp(a,L,T));p.push(pp(n,a,R),pp(n,a,R));
+   p.push(rp(a+12,L,G),pp(n,a+10,G),pp(n==3?4:n-1,a,G));return shuf(p)}};
+}
+const SHAPES={
+ cuboid:{label:'rectangular prism',name:'Rectangular prism (cuboid)',facts:'6 rectangular faces, 12 edges, 8 vertices. Opposite faces are equal.',
+  tree:()=>({n:'Base',w:110,h:70,k:[
+   {n:'Front',w:110,h:55,e:'b',k:[{n:'Top',w:110,h:70,e:'b'}]},
+   {n:'Back',w:110,h:55,e:'t'},{n:'Left',w:55,h:70,e:'l'},{n:'Right',w:55,h:70,e:'r'}]}),
+  pcs:()=>shuf([rp(110,70,Y),rp(110,70,Y),rp(55,70,P),rp(55,70,P),rp(110,55,T),rp(110,55,T),rp(110,110,G),pp(3,60,G),rp(60,60,G)])},
+ square:stripShape('square prism',4,60,100),
+ triangular:stripShape('triangular prism',3,80,100),
+ pentagonal:stripShape('pentagonal prism',5,52,90),
+ hexagonal:stripShape('hexagonal prism',6,44,90),
+ octagonal:stripShape('octagonal prism',8,32,90)
+};
+const ROT={b:a=>`rotateX(${a}deg)`,t:a=>`rotateX(${-a}deg)`,r:a=>`rotateY(${-a}deg)`,l:a=>`rotateY(${a}deg)`};
+let shape='cuboid',root,nodes=[],pieces=[],sel=null,tilt=58,spin=-25,raf,v=0;
+
+const dims=n=>n.pg?`${NAMES[n.pg.n]} ${n.pg.a}`:`${n.w} × ${n.h}`;
+function place(d,nd,par){
+ if(!par){d.style.left=-nd.w/2+'px';d.style.top=-nd.h/2+'px';return}
+ const o={b:['50% 0',(par.w-nd.w)/2,par.h],t:['50% 100%',(par.w-nd.w)/2,-nd.h],
+  r:['0 50%',par.w,(par.h-nd.h)/2],l:['100% 50%',-nd.w,(par.h-nd.h)/2]}[nd.e];
+ d.style.transformOrigin=o[0];d.style.left=o[1]+'px';d.style.top=o[2]+'px';
+}
+function mk(nd,par,three){
+ if(!nd.pts)nd.pts=rectPts(nd.w,nd.h);
+ const d=document.createElement('div');
+ d.className='f '+(three?'f3':'f2');d.style.width=nd.w+'px';d.style.height=nd.h+'px';
+ d.innerHTML=`<svg width="${nd.w}" height="${nd.h}"><polygon points="${nd.pts}"/></svg><span></span>`;
+ const s=d.querySelector('span');s.style.top=(nd.off||0)+'px';if(nd.w<45)s.style.fontSize='8px';
+ place(d,nd,par);nd[three?'e3':'e2']=d;
+ if(!three)d.addEventListener('click',()=>tap(nd));
+ (nd.k||[]).forEach(c=>d.appendChild(mk(c,nd,three)));
+ return d;
+}
+const flat=(n,a=[])=>{a.push(n);(n.k||[]).forEach(c=>flat(c,a));return a};
+const fits=(p,n)=>!!p.pg==!!n.pg&&(p.pg?p.pg.n==n.pg.n&&p.pg.a==n.pg.a:[p.w,p.h].sort().join()==[n.w,n.h].sort().join());
+const need=n=>n.pg?`a ${NAMES[n.pg.n]} with side ${n.pg.a}`:`a rectangle ${n.w} × ${n.h}`;
+function say(t,bad){$('msg').textContent=t;$('msg').style.color=bad?'#b00020':'#1b7a3a'}
+
+function load(){
+ const S=SHAPES[shape];root=S.tree();nodes=flat(root);sel=null;v=0;
+ pieces=S.pcs();pieces.forEach(p=>p.used=false);
+ $('st2').innerHTML='';$('st3').innerHTML='';
+ $('st2').appendChild(mk(root,null,false));$('st3').appendChild(mk(root,null,true));
+ nodes.forEach(n=>n.p=null);
+ $('name').textContent=S.name;$('facts').textContent=S.facts;
+ $('fold').value=0;$('st3').classList.add('nt');
+ drawTray();fit();update();say('Start by tapping a shape in the tray.');
+}
+function drawTray(){
+ const box=$('pieces');box.innerHTML='';
+ pieces.forEach(p=>{
+  const b=document.createElement('button');b.className='piece'+(p.used?' used':'')+(sel===p?' sel':'');
+  const k=Math.min(.6,64/Math.max(p.w,p.h)),txt=p.pg?`${NAMES[p.pg.n]}<br>side ${p.pg.a}`:`rectangle<br>${p.w} × ${p.h}`;
+  b.innerHTML=`<svg viewBox="-2 -2 ${p.w+4} ${p.h+4}" width="${(p.w+4)*k}" height="${(p.h+4)*k}"><polygon points="${p.pts}" fill="${p.c}" stroke="#1d2b3a" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg><span>${txt}</span>`;
+  b.setAttribute('aria-label',txt.replace('<br>',' '));
+  b.onclick=()=>{sel=sel===p?null:p;drawTray();if(sel)say('Now tap the matching place on the net.')};
+  box.appendChild(b);
+ });
+}
+function tap(n){
+ if(n.p){say('This shape is locked in place. Tap Reset to start again.');return}
+ if(!sel){say('Pick a shape from the tray first.',1);return}
+ if(!fits(sel,n)){
+  n.e2.classList.add('bad');setTimeout(()=>n.e2.classList.remove('bad'),700);
+  say(`That shape does not fit here. This place needs ${need(n)}.`,1);return}
+ n.p=sel;sel.used=true;sel=null;drawTray();update();say('Correct! The shape is locked in place.');
+}
+function update(){
+ nodes.forEach((n,i)=>{
+  const on=!!n.p,c=on?n.p.c:'';
+  n.e2.classList.toggle('on',on);n.e2.querySelector('polygon').style.fill=c;
+  n.e3.querySelector('polygon').style.fill=c;n.e3.style.visibility=on?'visible':'hidden';
+  n.e2.querySelector('span').textContent=on?`${n.n}\n${dims(n)}`:dims(n);
+  n.e3.querySelector('span').textContent=n.n;
+  if(i)n.e3.style.transform=ROT[n.e](v*(n.m||90));
+ });
+ const placed=nodes.filter(n=>n.p).length,all=placed===nodes.length;
+ $('prog').textContent=`Shapes placed: ${placed} of ${nodes.length}`;
+ $('fold').disabled=$('play').disabled=!all;
+ $('play').textContent=v>=.5?'Unfold':'Fold';
+ $('hint2').textContent=all?'Net complete':'Tap a dashed place to add the shape';
+ if(all)say(v>.999?`You formed a ${SHAPES[shape].label}. Unfold it to see the net again.`:'Net complete! Use Fold to build the 3D prism.');
+}
+function fit(){const k=Math.min(1,$('p3').clientWidth/310);$('st2').style.transform=`scale(${k})`;$('st3').dataset.k=k;view()}
+function view(){$('st3').style.transform=`scale(${$('st3').dataset.k||1}) rotateX(${tilt}deg) rotateZ(${spin}deg)`}
+function setFold(p,anim){v=p;$('st3').classList.toggle('nt',!anim);$('fold').value=p*100;update()}
+function setShape(s){
+ shape=s;document.querySelectorAll('.mk').forEach(b=>b.setAttribute('aria-pressed',b.dataset.k===s));
+ cancelAnimationFrame(raf);load();
+}
+Object.keys(SHAPES).forEach(k=>{
+ const b=document.createElement('button');b.className='mk';b.dataset.k=k;b.textContent='Make '+SHAPES[k].label;
+ b.setAttribute('aria-pressed',k===shape);b.onclick=()=>setShape(k);$('bar').insertBefore(b,$('reset'));
+});
+$('play').onclick=()=>{
+ cancelAnimationFrame(raf);
+ const from=v,to=from<.5?1:0,t0=performance.now(),dur=2200;
+ (function step(t){
+  const q=Math.min(1,(t-t0)/dur),e=q<.5?2*q*q:1-Math.pow(-2*q+2,2)/2;
+  setFold(from+(to-from)*e,false);if(q<1)raf=requestAnimationFrame(step);
+ })(t0);
+};
+$('fold').oninput=e=>{cancelAnimationFrame(raf);setFold(e.target.value/100,false)};
+$('reset').onclick=()=>{cancelAnimationFrame(raf);tilt=58;spin=-25;view();load()};
+let drag=null;
+$('p3').addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY}});
+addEventListener('pointermove',e=>{
+ if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag={x:e.clientX,y:e.clientY};
+ spin+=dx*.6;tilt=Math.max(10,Math.min(85,tilt-dy*.4));$('st3').classList.add('nt');view();
+});
+addEventListener('pointerup',()=>{drag=null});
+addEventListener('resize',fit);
+load();
+</script>
+</body>
+</html>
