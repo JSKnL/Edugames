@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Symmetry Challenge</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Trebuchet MS",Arial,sans-serif;background:#eef5ff;color:#1d2b4f;display:flex;justify-content:center}
+.app{width:100%;max-width:560px;padding:14px}
+h1{margin:4px 0 10px;font-size:1.5rem;text-align:center}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tab{flex:1;padding:9px 4px;border:2px solid #3b6fd8;background:#fff;color:#3b6fd8;border-radius:10px;font-weight:bold;font-size:.95rem;cursor:pointer}
+.tab.on{background:#3b6fd8;color:#fff}
+.card{background:#fff;border-radius:14px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.task{font-size:1.02rem;margin:0 0 8px;min-height:3.2em}
+.bar{display:flex;justify-content:space-between;font-weight:bold;margin-bottom:6px}
+canvas{display:block;width:100%;max-width:420px;margin:0 auto;border:2px solid #c5d3f0;border-radius:10px;background:#fcfdff;touch-action:none;cursor:crosshair}
+.msg{margin:10px 0 4px;padding:10px;border-radius:10px;min-height:44px;background:#f1f4fb;font-weight:bold}
+.msg.ok{background:#dff5e1;color:#1c6b2c}.msg.bad{background:#fde4e4;color:#a02323}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+button.b{flex:1;min-width:120px;padding:10px;border:0;border-radius:10px;font-size:1rem;font-weight:bold;cursor:pointer;color:#fff;background:#3b6fd8}
+button.b.g{background:#2e9e4a}button.b.r{background:#d9534f}button.b.o{background:#e08a1e}
+button.b:disabled{opacity:.4;cursor:not-allowed}
+.opt{display:block;width:100%;margin:6px 0;padding:11px;border:2px solid #c5d3f0;background:#fff;border-radius:10px;text-align:left;font-size:1rem;cursor:pointer;color:#1d2b4f}
+.opt.good{background:#dff5e1;border-color:#2e9e4a}.opt.badopt{background:#fde4e4;border-color:#d9534f}
+.score{background:#1d2b4f;color:#fff;border-radius:12px;padding:8px 12px;margin-bottom:10px;text-align:center;font-size:1.15rem}
+.score b{font-size:1.5rem;color:#ffd84d}.score #sub{display:block;font-size:.8rem;opacity:.85;margin-top:2px}
+#intro h2{margin:0 0 6px;font-size:1.2rem}#intro h3{margin:10px 0 4px}#intro ol{margin:4px 0;padding-left:20px}#intro li{margin:3px 0}
+#ex{cursor:default;max-width:300px}.cap{font-size:.9rem;text-align:center;margin:6px 0}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🔷 Symmetry Challenge</h1>
+  <div class="score">⭐ Total points: <b id="total">0</b><span id="sub"></span></div>
+  <div class="tabs">
+    <button class="tab on" id="t1">Level 1: Beginner</button>
+    <button class="tab" id="t2">Level 2: Expert</button>
+    <button class="tab" id="t3">Level 3: Notan</button>
+  </div>
+  <div class="card">
+    <div id="intro" class="hide">
+      <h2>🎨 What is Notan?</h2>
+      <p>Notan (濃淡) is a Japanese art idea meaning <b>dark–light</b>. In a notan design, dark and light shapes are balanced, and they <b>swap places</b> in the mirror image.</p>
+      <canvas id="ex" width="600" height="600" aria-label="Notan example"></canvas>
+      <p class="cap"><b>Example:</b> the right side is the mirror image of the left side, but every <b>dark</b> square becomes <b>light</b> and every <b>light</b> square becomes <b>dark</b>.</p>
+      <h3>How to play</h3>
+      <ol>
+        <li>Look at the pattern in the given half. Both dark and light squares matter.</li>
+        <li>Find the red dashed mirror line. It can be vertical, horizontal or diagonal.</li>
+        <li>For each square, find its mirror partner on the other side of the line.</li>
+        <li>Give the partner the <b>opposite colour</b>. Click the partner of every <b>light</b> square to make it dark.</li>
+        <li>Press <b>Check</b>. Stuck? Use <b>💡 Hint</b>. Or press <b>👀 Show answer</b> (no point for that puzzle).</li>
+        <li>In the last puzzle you design your own notan!</li>
+      </ol>
+      <p><b>Scoring:</b> 1 point for each correct answer. Total points are shown at the top.</p>
+      <button class="b g" id="start" style="width:100%">Start Game ▶</button>
+    </div>
+    <div id="play">
+    <div class="bar"><span id="prog"></span></div>
+    <p class="task" id="task"></p>
+    <canvas id="cv" width="600" height="600" aria-label="Symmetry puzzle"></canvas>
+    <div id="mc" class="hide"></div>
+    <div class="msg" id="msg" role="status"></div>
+    <div class="btns">
+      <button class="b o hide" id="none">No line of symmetry</button>
+      <button class="b g hide" id="check">Check</button>
+      <button class="b o hide" id="hint">💡 Hint</button>
+      <button class="b o hide" id="ans">👀 Show answer</button>
+      <button class="b hide" id="how">ℹ️ How to play</button>
+      <button class="b" id="next" disabled>Next ▶</button>
+      <button class="b r" id="resetP">Reset puzzle</button>
+      <button class="b r" id="resetG">Reset game</button>
+    </div>
+    </div>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('cv'),c=cv.getContext('2d');
+const R=n=>Math.floor(Math.random()*n),F=(a,b)=>a+Math.random()*(b-a);
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=R(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const key=(r,k)=>r+','+k, BLUE='#3b6fd8', DARK='#222';
+const N=8,CELL=36,OFF=6;
+const COLORS=['#cfe0ff','#ffd9c9','#d5f2d0','#ffe9a8','#e6d4ff','#c8f0f0'];
+
+/* ---------- Level 1: random shapes (300x300 space, centre 150,150) ---------- */
+const mod180=a=>((a%180)+180)%180;
+const rot=(p,t)=>{const x=p[0]-150,y=p[1]-150,s=Math.sin(t),k=Math.cos(t);return[150+x*k-y*s,150+x*s+y*k];};
+function shapeOf(type){
+  const th=F(0,180),t=th*Math.PI/180;let pts=[],axes=[];
+  if(type==='reg'){
+    const n=3+R(6);
+    for(let k=0;k<n;k++){const a=-Math.PI/2+k*2*Math.PI/n;pts.push([150+105*Math.cos(a),150+105*Math.sin(a)]);}
+    for(let k=0;k<n;k++)axes.push(90+k*180/n);
+  }else if(type==='rect'){
+    let hw,hh;do{hw=F(45,95);hh=F(30,70);}while(Math.abs(hw-hh)<18);
+    pts=Math.random()<.5?[[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]]:[[-hw,0],[0,-hh],[hw,0],[0,hh]];
+    pts=pts.map(p=>[150+p[0],150+p[1]]);axes=[0,90];
+  }else if(type==='mirror'){
+    let n,d;
+    for(;;){
+      n=3+R(3);d=[];for(let i=0;i<n;i++)d.push(F(20,85));
+      if(Math.random()<.6)d[0]=0;if(Math.random()<.6)d[n-1]=0;
+      let diff=0;for(let i=0;i<n;i++)diff=Math.max(diff,Math.abs(d[i]-d[n-1-i]));
+      if(diff>20)break;
+    }
+    const y=d.map((_,i)=>55+i*190/(n-1)+(i>0&&i<n-1?F(-8,8):0));
+    for(let i=0;i<n;i++)pts.push([150+d[i],y[i]]);
+    for(let i=n-1;i>=0;i--)pts.push([150-d[i],y[i]]);
+    axes=[90];
+  }else{
+    const m=5+R(3);
+    for(let k=0;k<m;k++){const a=(k+F(-.25,.25))*2*Math.PI/m,r=F(45,120);pts.push([150+r*Math.cos(a),150+r*Math.sin(a)]);}
+  }
+  return{type:'shape',pts:pts.map(p=>rot(p,t)),axes:axes.map(a=>mod180(a+th)),color:COLORS[R(COLORS.length)],line:null,state:'',
+    task:'Look at the shape. It may be turned around! Drag across it to draw a line of symmetry. If you think it has none, press the orange button.'};
+}
+const gen1=()=>shuffle(['mirror','mirror','reg','rect','asym','mirror']).map(shapeOf);
+
+/* ---------- Grid helpers (8x8) ---------- */
+const MAP={v:(r,k)=>[r,7-k],h:(r,k)=>[7-r,k],d:(r,k)=>[k,r],a:(r,k)=>[7-k,7-r],q:(r,k)=>[r<4?r:7-r,k<4?k:7-k]};
+const GIVEN={v:(r,k)=>k<4,h:(r,k)=>r<4,d:(r,k)=>k>=r,a:(r,k)=>r+k<=7,q:(r,k)=>r<4&&k<4};
+const LINES={v:[[150,0,150,300]],h:[[0,150,300,150]],d:[[6,6,294,294]],a:[[294,6,6,294]],q:[[150,0,150,300],[0,150,300,150]]};
+function genGiven(kind){
+  const g=GIVEN[kind],cells=[];
+  for(let r=0;r<N;r++)for(let k=0;k<N;k++)if(g(r,k))cells.push([r,k]);
+  for(let t=0;t<60;t++){
+    const s=new Set(cells.filter(()=>Math.random()<.5).map(p=>key(...p))),s2=new Set();
+    cells.forEach(([r,k])=>{
+      let cnt=0,nb=0;
+      for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const rr=r+a,cc=k+b;if(rr<0||cc<0||rr>=N||cc>=N||!g(rr,cc))continue;nb++;if(s.has(key(rr,cc)))cnt++;}
+      if(cnt*2>nb)s2.add(key(r,k));
+    });
+    if(s2.size>=cells.length*.3&&s2.size<=cells.length*.7)return s2;
+  }
+  return new Set(cells.slice(0,cells.length>>1).map(p=>key(...p)));
+}
+const gridPuz=(kind,invert,task)=>({type:'grid',kind,invert,given:genGiven(kind),mine:new Set(),wrong:new Set(),task});
+
+/* ---------- Level 2: higher-order thinking ---------- */
+function spotPuz(){
+  const kind=Math.random()<.5?'v':'h',pat=genGiven(kind);
+  [...pat].forEach(s=>{const[r,k]=s.split(',').map(Number);pat.add(key(...MAP[kind](r,k)));});
+  const r0=R(N),c0=R(N),k0=key(r0,c0);
+  pat.has(k0)?pat.delete(k0):pat.add(k0);
+  return{type:'spot',kind,pat,pair:[k0,key(...MAP[kind](r0,c0))],bad:null,
+    task:'🔍 Spot the mistake! This figure should be symmetrical about the red line, but one square breaks the pattern. Click a square that has no matching partner.'};
+}
+const mcPuz=(task,right,wrong,why)=>({type:'mc',task,why,opts:shuffle([{t:right,ok:true},...wrong.map(t=>({t,ok:false}))])});
+function gen2(){return[
+  gridPuz('v',false,'↔ Vertical mirror line! Reflect the blue squares across the red line. Each square needs a partner the same distance away on the other side.'),
+  gridPuz('h',false,'↕ Horizontal mirror line! Reflect the blue squares up/down across the red line.'),
+  gridPuz('d',false,'↗ Diagonal mirror! Reflect the blue squares in the red diagonal line. Careful: the image is not just left-to-right.'),
+  gridPuz('a',false,'↖ Another diagonal mirror! Complete the figure by reflecting it in the red line.'),
+  gridPuz('q',false,'✚ Two mirror lines! Complete all three empty quarters so the whole figure is symmetrical about both red lines.'),
+  spotPuz(),
+  gridPuz(['v','h','d','a'][R(4)],false,'🧩 Challenge! Find the red mirror line, then complete the figure by reflecting every blue square.'),
+  spotPuz(),
+  gridPuz('q',false,'✚ Final challenge! Two mirror lines again. Complete all three empty quarters.')
+];}
+
+/* ---------- Level 3: Notan ---------- */
+function gen3(){
+  const t='🎨 Notan: light and dark swap places in the mirror image. Black becomes white and white becomes black. ';
+  const ks=shuffle(['v','h','d','a']).slice(0,3);
+  return[...ks.map(k=>gridPuz(k,true,t+'Click squares in the empty half to make the dark parts of the notan mirror image.')),
+    {type:'free',mine:new Set(),task:'✏️ Design your own notan! Click squares on the left to make a pattern. The right side shows the notan mirror image. Balance light and dark (at least 6 black and 6 white squares on the left), then press "I\'m done".'}];
+}
+
+/* ---------- state ---------- */
+let lvl=1,L={},idx={1:0,2:0,3:0},drag=null,introSeen=false;
+const cur=()=>L[lvl][idx[lvl]];
+function build(){L={1:gen1(),2:gen2(),3:gen3()};idx={1:0,2:0,3:0};}
+function setMsg(t,cls){const m=$('msg');m.textContent=t;m.className='msg '+(cls||'');}
+const lp=n=>L[n].reduce((s,p)=>s+(p.awarded||0),0);
+function updateTop(){
+  $('total').textContent=lp(1)+lp(2)+lp(3);
+  $('sub').textContent='L1: '+lp(1)+'/'+L[1].length+'  ·  L2: '+lp(2)+'/'+L[2].length+'  ·  L3: '+lp(3)+'/'+L[3].length;
+  $('prog').textContent='Puzzle '+(idx[lvl]+1)+' of '+L[lvl].length;
+}
+function done(p,_,msg){   // 1 point for every correct answer
+  p.solved=true;p.awarded=1;updateTop();redraw();
+  lock(p,msg+' (+1 point)');
+}
+function lock(p,msg,cls){
+  ['none','check','hint','ans'].forEach(i=>$(i).disabled=true);
+  if(idx[lvl]===L[lvl].length-1){setMsg(msg+' 🎉 Level '+lvl+' complete! You scored '+lp(lvl)+' out of '+L[lvl].length+'. Press "Reset game" for new random puzzles.',cls||'ok');$('next').disabled=true;}
+  else{setMsg(msg,cls||'ok');$('next').disabled=false;}
+}
+
+/* ---------- drawing ---------- */
+const clear=()=>{c.setTransform(2,0,0,2,0,0);c.clearRect(0,0,300,300);};
+function drawShape(p){
+  clear();c.beginPath();p.pts.forEach((q,i)=>i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]));c.closePath();
+  c.fillStyle=p.color;c.fill();c.lineWidth=3;c.strokeStyle=BLUE;c.stroke();
+  const Ln=p.line||(drag&&{a:drag.a,b:drag.b});
+  if(Ln){c.beginPath();c.moveTo(Ln.a.x,Ln.a.y);c.lineTo(Ln.b.x,Ln.b.y);c.lineWidth=3;c.setLineDash([8,6]);
+    c.strokeStyle=p.state==='ok'?'#2e9e4a':p.state==='bad'?'#d9534f':'#e08a1e';c.stroke();c.setLineDash([]);}
+}
+function drawGrid(p){
+  clear();
+  for(let r=0;r<N;r++)for(let k=0;k<N;k++){
+    const kk=key(r,k);let f='#fff';
+    if(p.type==='spot')f=p.pat.has(kk)?BLUE:'#fff';
+    else if(p.type==='free')f=k<4?(p.mine.has(kk)?DARK:'#f3f6fd'):(p.mine.has(key(r,7-k))?'#fff':DARK);
+    else if(GIVEN[p.kind](r,k))f=p.given.has(kk)?(p.invert?DARK:BLUE):'#f3f6fd';
+    else f=p.mine.has(kk)?(p.invert?DARK:'#f0a030'):'#fff';
+    const x=OFF+k*CELL,y=OFF+r*CELL;
+    c.fillStyle=f;c.fillRect(x,y,CELL,CELL);c.lineWidth=1;c.strokeStyle='#b8c6e6';c.strokeRect(x,y,CELL,CELL);
+    const H=p.hintCells;
+    const ring=(p.wrong&&p.wrong.has(kk))||p.bad===kk?'#d9534f':(p.solved&&p.pair&&p.pair.includes(kk))||(p.revealed&&p.mine.has(kk))?'#2e9e4a':H&&H.t===kk?'#f5b800':H&&H.s===kk?'#9b30d9':null;
+    if(ring){c.lineWidth=3;c.strokeStyle=ring;c.strokeRect(x+2,y+2,CELL-4,CELL-4);}
+  }
+  c.setLineDash([7,5]);c.lineWidth=3;c.strokeStyle='#d9534f';
+  (LINES[p.kind||'v']).forEach(l=>{c.beginPath();c.moveTo(l[0],l[1]);c.lineTo(l[2],l[3]);c.stroke();});
+  c.setLineDash([]);
+}
+function redraw(){const p=cur();if(p.type==='shape')drawShape(p);else if(p.type!=='mc')drawGrid(p);}
+
+function renderMC(p){
+  const box=$('mc');box.innerHTML='';
+  p.opts.forEach(o=>{
+    const b=document.createElement('button');b.className='opt';b.textContent=o.t;
+    if(p.solved&&o.ok)b.classList.add('good');
+    if(o.dead){b.disabled=true;b.classList.add('badopt');}
+    b.onclick=()=>{
+      if(p.solved)return;
+      if(o.ok){b.classList.add('good');done(p,20,'✅ Correct! '+p.why);}
+      else{b.classList.add('badopt');b.disabled=true;setMsg('❌ Not quite. Picture folding the shape and check whether the halves match exactly.','bad');}
+    };
+    box.appendChild(b);
+  });
+}
+
+/* ---------- load a puzzle ---------- */
+const EX=['..##','.###','...#','##.#','##.#','#...','#.##','..##'];
+function drawExample(){
+  const x=$('ex').getContext('2d');x.setTransform(2,0,0,2,0,0);x.clearRect(0,0,300,300);
+  for(let r=0;r<N;r++)for(let k=0;k<N;k++){
+    const dark=k<4?EX[r][k]==='#':EX[r][7-k]!=='#';
+    x.fillStyle=dark?DARK:(k<4?'#f3f6fd':'#fff');
+    x.fillRect(OFF+k*CELL,OFF+r*CELL,CELL,CELL);x.lineWidth=1;x.strokeStyle='#b8c6e6';x.strokeRect(OFF+k*CELL,OFF+r*CELL,CELL,CELL);
+  }
+  x.setLineDash([7,5]);x.lineWidth=3;x.strokeStyle='#d9534f';x.beginPath();x.moveTo(150,0);x.lineTo(150,300);x.stroke();
+}
+function load(){
+  const p=cur();
+  [1,2,3].forEach(n=>$('t'+n).classList.toggle('on',lvl==n));
+  updateTop();
+  const intro=lvl==3&&!introSeen;
+  $('intro').classList.toggle('hide',!intro);$('play').classList.toggle('hide',intro);
+  if(intro){drawExample();return;}
+  $('task').textContent=p.task;
+  cv.classList.toggle('hide',p.type==='mc');$('mc').classList.toggle('hide',p.type!=='mc');
+  $('none').classList.toggle('hide',p.type!=='shape');
+  $('check').classList.toggle('hide',!(p.type==='grid'||p.type==='free'));
+  $('check').textContent=p.type==='free'?"I'm done":'Check';
+  $('hint').classList.toggle('hide',lvl<2);
+  $('ans').classList.toggle('hide',lvl!==3);$('how').classList.toggle('hide',lvl!==3);
+  const s=!!p.solved;
+  $('none').disabled=s;$('check').disabled=s;$('hint').disabled=s;$('ans').disabled=s||p.type==='free';
+  $('next').disabled=!(s&&idx[lvl]<L[lvl].length-1);
+  if(p.type==='mc')renderMC(p);
+  redraw();
+  if(s)setMsg(p.awarded?'✅ Solved! (+1 point)':'Answer shown. No point for this puzzle.',p.awarded?'ok':'');
+  else setMsg(p.type==='shape'?'Draw a straight line that cuts the shape into two matching halves.':p.type==='spot'?'Look carefully at each pair of mirror squares.':p.type==='mc'?'Choose the best answer.':p.type==='free'?'Click squares on the left side to start designing.':'Click an empty square to colour it; click again to remove it.');
+}
+
+/* ---------- interaction ---------- */
+const pos=e=>{const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*300,y:(e.clientY-r.top)/r.height*300};};
+cv.addEventListener('pointerdown',e=>{
+  e.preventDefault();const p=cur();if(p.solved)return;const q=pos(e);
+  if(p.type==='shape'){drag={a:q,b:q};p.line=null;p.state='';cv.setPointerCapture(e.pointerId);drawShape(p);return;}
+  const k=Math.floor((q.x-OFF)/CELL),r=Math.floor((q.y-OFF)/CELL);
+  if(r<0||k<0||r>=N||k>=N)return;const kk=key(r,k);
+  if(p.type==='spot'){
+    if(p.pair.includes(kk))done(p,20,'✅ Found it! That square and its mirror partner do not match.');
+    else{p.bad=kk;setMsg('❌ That square has a matching partner. Check the others.','bad');drawGrid(p);}
+    return;
+  }
+  if(p.type==='free'){if(k>=4)return;}
+  else if(GIVEN[p.kind](r,k))return;
+  p.mine.has(kk)?p.mine.delete(kk):p.mine.add(kk);
+  if(p.wrong)p.wrong=new Set();p.hintCells=null;
+  drawGrid(p);
+});
+cv.addEventListener('pointermove',e=>{const p=cur();if(p.type==='shape'&&drag){drag.b=pos(e);drawShape(p);}});
+cv.addEventListener('pointerup',e=>{
+  const p=cur();if(p.type!=='shape'||!drag)return;
+  drag.b=pos(e);const a=drag.a,b=drag.b;drag=null;
+  const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy);
+  if(len<100){p.line=null;drawShape(p);setMsg('Your line is too short. Draw it right across the shape.','bad');return;}
+  p.line={a,b};
+  const dist=Math.abs(dx*(150-a.y)-dy*(150-a.x))/len,ang=mod180(Math.atan2(dy,dx)*180/Math.PI);
+  const ok=p.axes.some(t=>{let d=Math.abs(ang-t);d=Math.min(d,180-d);return d<9&&dist<16;});
+  if(ok){p.state='ok';const n=p.axes.length;done(p,10,'✅ Correct! Both halves match. This shape has '+n+' line'+(n>1?'s':'')+' of symmetry.');}
+  else{p.state='bad';drawShape(p);setMsg(p.axes.length?'❌ Not quite. Imagine folding along your line: do the halves fit exactly? Try again.':'❌ Not quite. Does this shape have any line of symmetry at all?','bad');}
+});
+$('none').onclick=()=>{
+  const p=cur();if(p.solved)return;
+  if(!p.axes.length){p.line=null;done(p,10,'✅ Correct! This irregular shape has no line of symmetry.');}
+  else setMsg('❌ This shape does have a line of symmetry. Try drawing it!','bad');
+};
+$('check').onclick=()=>{
+  const p=cur();if(p.solved)return;
+  if(p.type==='free'){
+    if(p.mine.size>=6&&p.mine.size<=26)done(p,20,'✅ A balanced notan design! Every dark part on one side is a light part on the other.');
+    else setMsg('Aim for balance: at least 6 black and 6 white squares on the left side.','bad');
+    return;
+  }
+  const tgt=(r,k)=>{const[s,t]=MAP[p.kind](r,k),g=p.given.has(key(s,t));return p.invert?!g:g;};
+  p.wrong=new Set([...p.mine].filter(x=>{const[r,k]=x.split(',').map(Number);return !tgt(r,k);}));
+  let miss=0;
+  for(let r=0;r<N;r++)for(let k=0;k<N;k++)if(!GIVEN[p.kind](r,k)&&tgt(r,k)&&!p.mine.has(key(r,k)))miss++;
+  if(!p.wrong.size&&!miss)done(p,20,p.invert?'✅ Beautiful notan! Every shape has swapped to the opposite colour.':'✅ Perfect! Every square matches its mirror image.');
+  else{drawGrid(p);setMsg('❌ Not yet. '+p.wrong.size+' square(s) in the wrong place (red) and '+miss+' still missing.'+(p.invert?' Remember: the mirror image has the OPPOSITE colour!':' Measure each square\'s distance from the red line.'),'bad');}
+};
+$('next').onclick=()=>{idx[lvl]++;load();};
+const target=(p,r,k)=>{const[a,b]=MAP[p.kind](r,k),g=p.given.has(key(a,b));return p.invert?!g:g;};
+$('hint').onclick=()=>{
+  const p=cur();if(p.solved)return;
+  if(p.type==='mc'){
+    const w=p.opts.filter(o=>!o.ok&&!o.dead);
+    if(!w.length){setMsg('💡 Only the correct answer is left!');return;}
+    w[R(w.length)].dead=true;renderMC(p);setMsg('💡 Hint: one wrong answer has been crossed out. Imagine folding the shape.');return;
+  }
+  if(p.type==='spot'){const[r,k]=p.pair[0].split(',').map(Number);setMsg('💡 Hint: the mistake is in '+(p.kind==='v'?'row '+(r+1):'column '+(k+1))+'. Compare the squares on each side of the red line.');return;}
+  if(p.type==='free'){setMsg('💡 Hint: try a simple shape such as an arrow, a letter or a zig-zag. Make sure you have both dark and light areas.');return;}
+  const wr=[...p.mine].filter(x=>{const[r,k]=x.split(',').map(Number);return !target(p,r,k);});
+  if(wr.length){p.wrong=new Set([wr[0]]);p.hintCells=null;drawGrid(p);setMsg('💡 Hint: the square outlined in red is in the wrong place. Remove it and look again at its mirror partner.');return;}
+  const miss=[];
+  for(let r=0;r<N;r++)for(let k=0;k<N;k++)if(!GIVEN[p.kind](r,k)&&target(p,r,k)&&!p.mine.has(key(r,k)))miss.push([r,k]);
+  if(!miss.length){setMsg('💡 You have placed every square. Press Check!');return;}
+  const[r,k]=miss[R(miss.length)];
+  p.hintCells={t:key(r,k),s:key(...MAP[p.kind](r,k))};p.wrong=new Set();drawGrid(p);
+  setMsg(p.invert?'💡 Hint: the purple square is LIGHT, so its mirror partner (gold outline) must be DARK. Click the gold square.':'💡 Hint: the purple square is coloured, so its mirror partner (gold outline) must be coloured too. Click the gold square.');
+};
+$('ans').onclick=()=>{
+  const p=cur();if(p.solved||p.type!=='grid')return;
+  p.mine=new Set();
+  for(let r=0;r<N;r++)for(let k=0;k<N;k++)if(!GIVEN[p.kind](r,k)&&target(p,r,k))p.mine.add(key(r,k));
+  p.wrong=new Set();p.hintCells=null;p.revealed=true;p.solved=true;p.awarded=0;updateTop();drawGrid(p);
+  lock(p,'👀 Correct answer shown (green outlines). No point this time. Study it, then press Next!','info');
+};
+$('start').onclick=()=>{introSeen=true;load();};
+$('how').onclick=()=>{introSeen=false;load();};
+$('resetP').onclick=()=>{
+  const p=cur();p.awarded=0;p.solved=false;p.revealed=false;p.hintCells=null;p.line=null;p.state='';p.bad=null;
+  if(p.mine)p.mine=new Set();if(p.wrong)p.wrong=new Set();
+  if(p.type==='mc'){p.opts.forEach(o=>o.dead=false);p.opts=shuffle(p.opts);}
+  load();
+};
+$('resetG').onclick=()=>{build();load();};
+[1,2,3].forEach(n=>$('t'+n).onclick=()=>{lvl=n;load();});
+build();load();
+</script>
+</body>
+</html>
